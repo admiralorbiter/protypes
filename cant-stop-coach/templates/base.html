@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Can't Stop Coach - AI-powered assistant for the Can't Stop board game with real-time odds and MCTS advice">
+    <meta name="keywords" content="Can't Stop, board game, AI, MCTS, odds, strategy">
+    <title>Can't Stop Coach - AI Strategy Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+  </head>
+  <body>
+    <header>
+      <h1>Can't Stop Coach</h1>
+      <p class="subtitle">Press or Park? Real-time odds & MCTS advice</p>
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+    <footer>
+      <div class="footer-content">
+        <div class="footer-section">
+          <strong>Can't Stop Coach</strong> - AI-powered strategy assistant
+        </div>
+        <div class="footer-section">
+          <small>Built with Flask | MCTS | Exact bust odds (1296 outcomes)</small>
+        </div>
+        <div class="footer-section">
+          <small>Prototype v1.0</small>
+        </div>
+      </div>
+    </footer>
+    <script>
+      async function postJSON(url, data) {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data || {})
+        });
+        return res.json();
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,283 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="game-container">
+  <!-- Game Controls Section -->
+  <section class="controls">
+    <div class="control-group">
+      <button id="newGame" class="btn-primary">🎮 New Game</button>
+      <label class="control-label">
+        <span>Players</span>
+        <input id="numPlayers" type="number" min="2" max="4" step="1" value="{{ state.num_players }}">
+      </label>
+    </div>
+    
+    <div class="riskbox">
+      <label class="control-label">
+        <span>Risk Profile</span>
+        <select id="risk">
+          <option value="averse">🛡️ Conservative</option>
+          <option value="neutral" selected>⚖️ Neutral</option>
+          <option value="seeking">🎯 Aggressive</option>
+        </select>
+      </label>
+      <label class="control-label">
+        <span>MCTS Iterations</span>
+        <input id="iters" type="number" min="200" step="200" value="2000">
+      </label>
+      <button id="coach" class="btn-coach">🤖 Get Coach Advice</button>
+    </div>
+  </section>
+
+  <!-- Game Status Section -->
+  <section class="game-status">
+    <div class="odds">
+      <div class="odds-header">
+        <span class="odds-icon">🎲</span>
+        <span><strong>Bust Probability (Next Roll):</strong></span>
+      </div>
+      <div class="odds-value" id="pBust">—</div>
+    </div>
+    
+    <div class="coach-display" id="coachDisplay">
+      <div class="coach-placeholder">Click "Get Coach Advice" for recommendations</div>
+    </div>
+  </section>
+
+  <!-- Game Board Section -->
+  <section class="board">
+    <div class="board-header">
+      <h3>Game Board</h3>
+      <div class="board-legend">
+        <div class="legend-item">
+          <span class="legend-color player0"></span>
+          <span>Player 1 (Blue)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color player1"></span>
+          <span>Player 2 (Orange)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color active"></span>
+          <span>Active Runners</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-color closed"></span>
+          <span>Closed Columns</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="columns">
+      {% for c in COLUMNS %}
+        <div class="col">
+          <div class="col-label">{{ c }}</div>
+          <div class="stack" data-col="{{ c }}">
+            {% set top = TOP[c] %}
+            {% for i in range(top, 0, -1) %}
+              <div class="cell" data-step="{{ i }}" title="Column {{ c }}, Step {{ i }}"></div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Game Actions Section -->
+  <section class="actions">
+    <div class="action-buttons">
+      <button id="roll" class="btn-roll">🎲 Roll Dice</button>
+      <button id="stop" class="btn-stop">🏦 Stop & Bank</button>
+    </div>
+    
+    <div class="roll-info-container">
+      <div class="roll-info-header">
+        <span class="roll-icon">📊</span>
+        <span>Roll Information</span>
+      </div>
+      <div id="rollInfo" class="roll-info-content">
+        <em>No roll yet. Click "Roll Dice" to start your turn.</em>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+const COLUMNS = {{ COLUMNS|tojson }};
+const TOP = {{ TOP|tojson }};
+let lastState = {{ state|tojson }};
+
+function render(state) {
+  lastState = state;
+  document.querySelectorAll('.cell').forEach(el => el.className = 'cell'); // reset
+  
+  // Render permanent positions (player 0 = blue, player 1 = orange, others gray)
+  state.players.forEach((p, idx) => {
+    Object.entries(p.permanent_pos).forEach(([col, step]) => {
+      step = parseInt(step);
+      col = parseInt(col);
+      if (step > 0) {
+        const sel = `.stack[data-col="${col}"] .cell[data-step="${step}"]`;
+        const el = document.querySelector(sel);
+        if (el) el.classList.add('perm', 'player'+idx);
+      }
+    });
+  });
+  
+  // Render active runners for current player (green)
+  Object.entries(state.turn.active_runners).forEach(([col, step]) => {
+    step = parseInt(step); col = parseInt(col);
+    const sel = `.stack[data-col="${col}"] .cell[data-step="${step}"]`;
+    const el = document.querySelector(sel);
+    if (el) el.classList.add('active');
+  });
+  
+  // Closed columns
+  Object.entries(state.claimed_by).forEach(([col, who]) => {
+    if (who !== null) {
+      document.querySelectorAll(`.stack[data-col="${col}"] .cell`).forEach(el => el.classList.add('closed'));
+    }
+  });
+}
+
+async function refreshState() {
+  const res = await fetch("/api/state");
+  const data = await res.json();
+  render(data.state);
+  updateOdds();
+  updateRollInfo(data.state.turn.last_roll);
+}
+
+async function updateOdds() {
+  const data = await postJSON("/api/odds", {});
+  const pct = (data.p_bust * 100).toFixed(1) + "%";
+  document.getElementById("pBust").innerText = pct;
+  
+  // Update odds styling based on risk level
+  const oddsValue = document.getElementById("pBust");
+  oddsValue.className = 'odds-value';
+  if (data.p_bust > 0.5) {
+    oddsValue.classList.add('high-risk');
+  } else if (data.p_bust > 0.25) {
+    oddsValue.classList.add('medium-risk');
+  } else {
+    oddsValue.classList.add('low-risk');
+  }
+}
+
+function updateRollInfo(roll) {
+  const el = document.getElementById("rollInfo");
+  if (!roll) { 
+    el.innerHTML = "<em>No roll yet. Click 'Roll Dice' to start your turn.</em>"; 
+    return; 
+  }
+  el.innerHTML = "<div class='roll-result'><strong>Roll:</strong> " + roll.join(", ") + "</div>";
+}
+
+function updateCoachDisplay(data) {
+  const display = document.getElementById("coachDisplay");
+  const rec = data.recommendation;
+  
+  let html = `
+    <div class="coach-recommendation">
+      <div class="coach-header">
+        <span class="coach-icon">🤖</span>
+        <span><strong>Coach Recommendation:</strong></span>
+      </div>
+      <div class="recommendation-main">
+        <div class="action-recommendation ${rec.action.toLowerCase()}">
+          <span class="action-text">${rec.action.toUpperCase()}</span>
+        </div>
+        <div class="recommendation-details">
+          <div class="detail-item">
+            <span class="detail-label">Press Q-Value:</span>
+            <span class="detail-value">${rec.q_press.toFixed(3)}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Park Q-Value:</span>
+            <span class="detail-value">${rec.q_stop.toFixed(3)}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Bust Probability:</span>
+            <span class="detail-value">${(rec.p_bust*100).toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+  `;
+  
+  if (data.pairing && data.pairing.pairing) {
+    html += `
+      <div class="pairing-suggestion">
+        <div class="pairing-header">
+          <span class="pairing-icon">🎯</span>
+          <span><strong>Suggested Pairing:</strong></span>
+        </div>
+        <div class="pairing-details">
+          <span class="pairing-numbers">${data.pairing.pairing[0]} & ${data.pairing.pairing[1]}</span>
+          <span class="pairing-q">Q-Value: ${data.pairing.q.toFixed(3)}</span>
+        </div>
+      </div>
+    `;
+  }
+  
+  html += '</div>';
+  display.innerHTML = html;
+}
+
+document.getElementById("roll").addEventListener("click", async () => {
+  const data = await postJSON("/api/roll", {});
+  updateRollInfo(data.roll);
+  
+  // list pairings as buttons
+  const el = document.getElementById("rollInfo");
+  const ps = data.pairings;
+  if (ps.length === 0) {
+    el.innerHTML += "<div class='bust-message'><strong>💥 Bust!</strong> No legal pairings available.</div>";
+  } else {
+    const pairingSection = document.createElement('div');
+    pairingSection.className = 'pairing-section';
+    pairingSection.innerHTML = "<div class='pairing-label'><strong>Legal Pairings:</strong></div>";
+    
+    const pairingButtons = document.createElement('div');
+    pairingButtons.className = 'pairing-buttons';
+    
+    ps.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'pairBtn';
+      btn.textContent = `${p[0]} & ${p[1]}`;
+      btn.dataset.p = p;
+      btn.addEventListener('click', async (e) => {
+        const pairing = JSON.parse("[" + btn.dataset.p + "]");
+        const res = await postJSON("/api/apply_pairing", {pairing: pairing});
+        await refreshState();
+      });
+      pairingButtons.appendChild(btn);
+    });
+    
+    pairingSection.appendChild(pairingButtons);
+    el.appendChild(pairingSection);
+  }
+  await updateOdds();
+});
+
+document.getElementById("stop").addEventListener("click", async () => {
+  await postJSON("/api/stop", {});
+  await refreshState();
+});
+
+document.getElementById("newGame").addEventListener("click", async () => {
+  const np = parseInt(document.getElementById("numPlayers").value || "2", 10);
+  await postJSON("/api/new_game", {num_players: np});
+  await refreshState();
+});
+
+document.getElementById("coach").addEventListener("click", async () => {
+  const risk = document.getElementById("risk").value;
+  const iters = parseInt(document.getElementById("iters").value || "2000", 10);
+  const data = await postJSON("/api/coach/recommend", {risk, iters});
+  updateCoachDisplay(data);
+});
+
+render(lastState);
+updateOdds();
+</script>
+{% endblock %}
