@@ -1,10 +1,16 @@
 
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Matching Markets Lab - College Edition - Simulate college admissions scenarios using the Gale-Shapley algorithm">
+    <meta name="keywords" content="matching markets, college admissions, gale-shapley, algorithm, simulation">
     <title>Matching Markets Lab — College Edition</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
   <body>
@@ -12,23 +18,188 @@
       <h1>Matching Markets Lab <span class="muted">College Edition (PoC)</span></h1>
       <p class="subtitle">Gale–Shapley with priorities, reserves, and policy toggles. See who benefits or loses.</p>
     </header>
+    
     <main>
       {% block content %}{% endblock %}
     </main>
+    
     <footer>
       <small>Prototype — Flask | DA | Reserves | Synthetic Cohorts</small>
     </footer>
+    
     <script>
+      // Utility functions
       async function postJSON(url, data) {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: {"Content-Type": "application/json"},
-          body: JSON.stringify(data || {})
-        });
-        return res.json();
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(data || {})
+          });
+          
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+          }
+          
+          return res.json();
+        } catch (error) {
+          console.error('Network error:', error);
+          throw error;
+        }
       }
-      function pct(x, digits=1) { return (x*100).toFixed(digits) + "%"; }
-      function sign(x) { return x >= 0 ? "+" : ""; }
+      
+      function pct(x, digits=1) { 
+        if (x === null || x === undefined) return 'N/A';
+        return (x*100).toFixed(digits) + "%"; 
+      }
+      
+      function sign(x) { 
+        if (x === null || x === undefined) return '';
+        return x >= 0 ? "+" : ""; 
+      }
+      
+      // Toast notification system
+      class Toast {
+        static show(message, type = 'info', duration = 4000) {
+          const toast = document.createElement('div');
+          toast.className = `toast toast-${type}`;
+          toast.innerHTML = `
+            <div class="toast-content">
+              <span class="toast-message">${message}</span>
+              <button class="toast-close">&times;</button>
+            </div>
+          `;
+          
+          document.body.appendChild(toast);
+          
+          // Animate in
+          setTimeout(() => toast.classList.add('show'), 100);
+          
+          // Auto remove
+          setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+          }, duration);
+          
+          // Manual close
+          toast.querySelector('.toast-close').addEventListener('click', () => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+          });
+        }
+        
+        static success(message) { this.show(message, 'success'); }
+        static error(message) { this.show(message, 'error'); }
+        static warning(message) { this.show(message, 'warning'); }
+        static info(message) { this.show(message, 'info'); }
+      }
+      
+      // Global error handler
+      window.addEventListener('error', (event) => {
+        console.error('Global error:', event.error);
+        Toast.error('An unexpected error occurred. Please try again.');
+      });
+      
+      // Unhandled promise rejection handler
+      window.addEventListener('unhandledrejection', (event) => {
+        console.error('Unhandled promise rejection:', event.reason);
+        Toast.error('A network or processing error occurred. Please try again.');
+      });
     </script>
+    
+    <style>
+      /* Toast notifications */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: var(--border-radius);
+        padding: 16px 20px;
+        box-shadow: var(--shadow);
+        z-index: 10000;
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        max-width: 400px;
+      }
+      
+      .toast.show {
+        transform: translateX(0);
+      }
+      
+      .toast-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      
+      .toast-message {
+        color: var(--fg);
+        font-size: 14px;
+      }
+      
+      .toast-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 18px;
+        cursor: pointer;
+        padding: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+      }
+      
+      .toast-close:hover {
+        background: var(--line);
+        color: var(--fg);
+      }
+      
+      .toast-success {
+        border-left: 4px solid var(--pos);
+      }
+      
+      .toast-error {
+        border-left: 4px solid var(--neg);
+      }
+      
+      .toast-warning {
+        border-left: 4px solid var(--warning);
+      }
+      
+      .toast-info {
+        border-left: 4px solid var(--accent);
+      }
+      
+      /* Loading overlay */
+      .loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(15, 23, 42, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        backdrop-filter: blur(4px);
+      }
+      
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 3px solid var(--accent);
+        border-top: 3px solid transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    </style>
   </body>
 </html>
