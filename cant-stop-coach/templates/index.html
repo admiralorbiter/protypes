@@ -9,9 +9,6 @@
         <span>Players</span>
         <input id="numPlayers" type="number" min="2" max="4" step="1" value="{{ state.num_players }}">
       </label>
-    </div>
-    
-    <div class="riskbox">
       <label class="control-label">
         <span>Risk Profile</span>
         <select id="risk">
@@ -28,59 +25,62 @@
     </div>
   </section>
 
-  <!-- Game Status Section -->
-  <section class="game-status">
-    <div class="odds">
-      <div class="odds-header">
-        <span class="odds-icon">🎲</span>
-        <span><strong>Bust Probability (Next Roll):</strong></span>
+  <!-- Game Status and Board Row -->
+  <div class="game-main-row">
+    <!-- Game Status Section -->
+    <section class="game-status">
+      <div class="odds">
+        <div class="odds-header">
+          <span class="odds-icon">🎲</span>
+          <span><strong>Bust Probability:</strong></span>
+        </div>
+        <div class="odds-value" id="pBust">—</div>
       </div>
-      <div class="odds-value" id="pBust">—</div>
-    </div>
-    
-    <div class="coach-display" id="coachDisplay">
-      <div class="coach-placeholder">Click "Get Coach Advice" for recommendations</div>
-    </div>
-  </section>
+      
+      <div class="coach-display" id="coachDisplay">
+        <div class="coach-placeholder">Click "Get Coach Advice" for recommendations</div>
+      </div>
+    </section>
 
-  <!-- Game Board Section -->
-  <section class="board">
-    <div class="board-header">
-      <h3>Game Board</h3>
-      <div class="board-legend">
-        <div class="legend-item">
-          <span class="legend-color player0"></span>
-          <span>Player 1 (Blue)</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-color player1"></span>
-          <span>Player 2 (Orange)</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-color active"></span>
-          <span>Active Runners</span>
-        </div>
-        <div class="legend-item">
-          <span class="legend-color closed"></span>
-          <span>Closed Columns</span>
-        </div>
-      </div>
-    </div>
-    
-    <div class="columns">
-      {% for c in COLUMNS %}
-        <div class="col">
-          <div class="col-label">{{ c }}</div>
-          <div class="stack" data-col="{{ c }}">
-            {% set top = TOP[c] %}
-            {% for i in range(top, 0, -1) %}
-              <div class="cell" data-step="{{ i }}" title="Column {{ c }}, Step {{ i }}"></div>
-            {% endfor %}
+    <!-- Game Board Section -->
+    <section class="board">
+      <div class="board-header">
+        <h3>Game Board</h3>
+        <div class="board-legend">
+          <div class="legend-item">
+            <span class="legend-color player0"></span>
+            <span>P1</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color player1"></span>
+            <span>P2</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color active"></span>
+            <span>Active</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-color closed"></span>
+            <span>Closed</span>
           </div>
         </div>
-      {% endfor %}
-    </div>
-  </section>
+      </div>
+      
+      <div class="columns">
+        {% for c in COLUMNS %}
+          <div class="col">
+            <div class="col-label">{{ c }}</div>
+            <div class="stack" data-col="{{ c }}">
+              {% set top = TOP[c] %}
+              {% for i in range(top, 0, -1) %}
+                <div class="cell" data-step="{{ i }}" title="Column {{ c }}, Step {{ i }}"></div>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
 
   <!-- Game Actions Section -->
   <section class="actions">
@@ -181,7 +181,7 @@ function updateCoachDisplay(data) {
     <div class="coach-recommendation">
       <div class="coach-header">
         <span class="coach-icon">🤖</span>
-        <span><strong>Coach Recommendation:</strong></span>
+        <span><strong>Recommendation:</strong></span>
       </div>
       <div class="recommendation-main">
         <div class="action-recommendation ${rec.action.toLowerCase()}">
@@ -189,15 +189,15 @@ function updateCoachDisplay(data) {
         </div>
         <div class="recommendation-details">
           <div class="detail-item">
-            <span class="detail-label">Press Q-Value:</span>
+            <span class="detail-label">Press:</span>
             <span class="detail-value">${rec.q_press.toFixed(3)}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">Park Q-Value:</span>
+            <span class="detail-label">Park:</span>
             <span class="detail-value">${rec.q_stop.toFixed(3)}</span>
           </div>
           <div class="detail-item">
-            <span class="detail-label">Bust Probability:</span>
+            <span class="detail-label">Bust:</span>
             <span class="detail-value">${(rec.p_bust*100).toFixed(1)}%</span>
           </div>
         </div>
@@ -209,11 +209,11 @@ function updateCoachDisplay(data) {
       <div class="pairing-suggestion">
         <div class="pairing-header">
           <span class="pairing-icon">🎯</span>
-          <span><strong>Suggested Pairing:</strong></span>
+          <span><strong>Pairing:</strong></span>
         </div>
         <div class="pairing-details">
           <span class="pairing-numbers">${data.pairing.pairing[0]} & ${data.pairing.pairing[1]}</span>
-          <span class="pairing-q">Q-Value: ${data.pairing.q.toFixed(3)}</span>
+          <span class="pairing-q">Q: ${data.pairing.q.toFixed(3)}</span>
         </div>
       </div>
     `;

@@ -22,7 +22,7 @@ body {
 }
 
 header { 
-  padding: 24px; 
+  padding: 20px 24px; 
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
@@ -30,7 +30,7 @@ header {
 
 h1 { 
   margin: 0; 
-  font-size: 2.5rem;
+  font-size: 2.2rem;
   font-weight: 700;
   background: linear-gradient(135deg, var(--accent), var(--blue));
   -webkit-background-clip: text;
@@ -39,23 +39,23 @@ h1 {
 }
 
 .subtitle { 
-  margin: 8px 0 0 0; 
+  margin: 6px 0 0 0; 
   opacity: .8; 
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 main { 
-  padding: 24px; 
+  padding: 20px 24px; 
   max-width: 1400px;
   margin: 0 auto;
 }
 
 footer {
   text-align: center;
-  padding: 24px 16px;
+  padding: 20px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
-  margin-top: 32px;
+  margin-top: 24px;
 }
 
 .footer-content {
@@ -93,23 +93,23 @@ footer {
 /* Enhanced Controls Section */
 .controls { 
   display: flex; 
-  gap: 16px; 
+  gap: 12px; 
   align-items: center; 
   flex-wrap: wrap; 
-  margin-bottom: 24px;
-  padding: 20px;
+  margin-bottom: 16px;
+  padding: 16px;
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--border);
 }
 
 .controls input, .controls select { 
-  padding: 10px 12px; 
-  border-radius: 8px; 
+  padding: 8px 10px; 
+  border-radius: 6px; 
   border: 1px solid var(--border); 
   background: var(--bg); 
   color: var(--fg);
-  font-size: 14px;
+  font-size: 13px;
   transition: all 0.2s ease;
 }
 
@@ -120,15 +120,16 @@ footer {
 }
 
 .controls button { 
-  padding: 10px 16px; 
-  border-radius: 8px; 
+  padding: 8px 14px; 
+  border-radius: 6px; 
   border: 1px solid var(--border); 
   background: linear-gradient(135deg, var(--surface), #2d3748); 
   color: var(--fg); 
   cursor: pointer;
   font-weight: 500;
+  font-size: 13px;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .controls button:hover { 
@@ -151,13 +152,12 @@ footer {
 
 /* Enhanced Odds Section */
 .odds { 
-  margin: 20px 0; 
-  padding: 16px 20px; 
-  background: var(--surface); 
-  border: 1px solid var(--border); 
-  border-radius: 12px;
-  font-size: 1.1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  margin: 0;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .odds strong {
@@ -167,18 +167,18 @@ footer {
 /* Enhanced Game Board */
 .board { 
   overflow-x: auto; 
-  padding: 20px 0;
+  padding: 16px 0;
   background: var(--surface);
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  margin: 20px 0;
+  margin: 16px 0;
 }
 
 .columns { 
   display: grid; 
-  grid-template-columns: repeat(11, minmax(50px, 1fr)); 
-  gap: 12px;
-  padding: 0 20px;
+  grid-template-columns: repeat(11, minmax(45px, 1fr)); 
+  gap: 8px;
+  padding: 0 16px;
 }
 
 .col { 
@@ -188,27 +188,27 @@ footer {
 }
 
 .col-label { 
-  margin-bottom: 12px; 
+  margin-bottom: 8px; 
   font-weight: 700;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: var(--accent);
-  padding: 8px 12px;
+  padding: 6px 8px;
   background: var(--bg);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--border);
 }
 
 .stack { 
   display: grid; 
-  grid-template-rows: repeat(13, 20px); 
+  grid-template-rows: repeat(13, 16px); 
   width: 100%; 
-  gap: 3px;
+  gap: 2px;
 }
 
 .cell { 
   border: 1px solid var(--border); 
-  border-radius: 6px; 
-  height: 20px; 
+  border-radius: 4px; 
+  height: 16px; 
   background: var(--bg);
   transition: all 0.2s ease;
   position: relative;
@@ -264,26 +264,26 @@ footer {
 
 /* Enhanced Actions Section */
 .actions { 
-  margin-top: 24px; 
+  margin-top: 16px; 
   display: flex; 
   gap: 16px; 
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
-  padding: 20px;
+  padding: 16px;
   background: var(--surface);
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid var(--border);
 }
 
 .actions button {
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 10px 20px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: linear-gradient(135deg, var(--green), #16a34a);
   color: white;
   cursor: pointer;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
@@ -371,13 +371,13 @@ em {
 .game-container {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 16px;
 }
 
 /* Control Groups */
 .control-group {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
   flex-wrap: wrap;
 }
@@ -385,14 +385,14 @@ em {
 .control-label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 14px;
+  gap: 2px;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .control-label span:first-child {
   color: var(--accent);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -420,46 +420,59 @@ em {
 
 /* Game Status Section */
 .game-status {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 300px;
 }
 
-@media (max-width: 1024px) {
-  .game-status {
+/* Game Main Row - Horizontal Layout */
+.game-main-row {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1200px) {
+  .game-main-row {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .game-status {
+    min-width: auto;
   }
 }
 
 /* Enhanced Odds Section */
-.odds {
+.odds { 
   margin: 0;
-  padding: 20px;
+  padding: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .odds-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 1rem;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
 }
 
 .odds-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .odds-value {
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 700;
   text-align: center;
-  padding: 16px;
-  border-radius: 8px;
+  padding: 12px;
+  border-radius: 6px;
   background: var(--bg);
   border: 2px solid var(--border);
   transition: all 0.3s ease;
@@ -485,51 +498,52 @@ em {
 
 /* Coach Display */
 .coach-display {
-  padding: 20px;
+  padding: 16px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  border-radius: 10px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
 }
 
 .coach-placeholder {
   text-align: center;
   opacity: 0.6;
   font-style: italic;
+  font-size: 0.9rem;
 }
 
 .coach-recommendation {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .coach-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 1.1rem;
-  margin-bottom: 8px;
+  gap: 6px;
+  font-size: 1rem;
+  margin-bottom: 6px;
 }
 
 .coach-icon {
-  font-size: 1.3rem;
+  font-size: 1.2rem;
 }
 
 .recommendation-main {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .action-recommendation {
   text-align: center;
-  padding: 16px;
-  border-radius: 8px;
-  font-size: 1.5rem;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 1.3rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .action-recommendation.press {
@@ -546,18 +560,19 @@ em {
 
 .recommendation-details {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
 }
 
 .detail-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 8px 10px;
   background: var(--bg);
-  border-radius: 6px;
+  border-radius: 4px;
   border: 1px solid var(--border);
+  font-size: 0.9rem;
 }
 
 .detail-label {
@@ -572,40 +587,40 @@ em {
 }
 
 .pairing-suggestion {
-  padding: 16px;
+  padding: 12px;
   background: var(--bg);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--border);
 }
 
 .pairing-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 1rem;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
 }
 
 .pairing-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .pairing-details {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .pairing-numbers {
-  font-size: 1.3rem;
+  font-size: 1.1rem;
   font-weight: 700;
   color: var(--accent);
 }
 
 .pairing-q {
   font-family: monospace;
-  font-size: 1rem;
+  font-size: 0.9rem;
   opacity: 0.8;
 }
 
@@ -614,35 +629,35 @@ em {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px 16px 20px;
+  padding: 0 16px 12px 16px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .board-header h3 {
   margin: 0;
   color: var(--accent);
-  font-size: 1.3rem;
+  font-size: 1.2rem;
 }
 
 .board-legend {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.9rem;
+  gap: 4px;
+  font-size: 0.8rem;
   opacity: 0.8;
 }
 
 .legend-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
   border: 1px solid var(--border);
 }
 
@@ -666,76 +681,78 @@ em {
 /* Action Buttons */
 .action-buttons {
   display: flex;
-  gap: 16px;
+  gap: 12px;
   align-items: center;
 }
 
 .roll-info-container {
   flex: 1;
-  margin-left: 20px;
+  margin-left: 16px;
 }
 
 .roll-info-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
-  font-size: 1rem;
+  gap: 6px;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
   color: var(--accent);
 }
 
 .roll-icon {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
 }
 
 .roll-info-content {
-  min-height: 80px;
+  min-height: 60px;
+  font-size: 0.9rem;
 }
 
 .roll-result {
-  font-size: 1.1rem;
-  margin-bottom: 12px;
+  font-size: 1rem;
+  margin-bottom: 8px;
 }
 
 .bust-message {
   color: #ef4444;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1rem;
   text-align: center;
-  padding: 12px;
+  padding: 10px;
   background: rgba(239, 68, 68, 0.1);
-  border-radius: 6px;
+  border-radius: 4px;
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
 .pairing-section {
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
 .pairing-label {
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   font-weight: 600;
   color: var(--accent);
+  font-size: 0.9rem;
 }
 
 .pairing-buttons {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
 /* Enhanced Pairing Buttons */
-.pairBtn {
+.pairBtn { 
   margin: 0;
-  padding: 10px 16px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
   transition: all 0.2s ease;
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .pairBtn:hover {
