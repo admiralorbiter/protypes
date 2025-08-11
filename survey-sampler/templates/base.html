@@ -1,0 +1,33 @@
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Survey Sample Size & MOE Planner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>Survey Sample Size & MOE Planner</h1>
+      <p class="subtitle">Find the responses you need to achieve a target margin of error (with FPC), plan multi-group samples, and size A/B comparisons.</p>
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+    <footer>
+      <small>Formulas use normal approximation for proportions, finite-population correction, and optional design effect.</small>
+    </footer>
+    <script>
+      async function postJSON(url, data) {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data || {})
+        });
+        return res.json();
+      }
+      function pct(x, d=2) { return (x*100).toFixed(d) + "%"; }
+    </script>
+  </body>
+</html>

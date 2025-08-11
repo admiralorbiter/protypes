@@ -92,10 +92,63 @@
 const EVENTS = {{ event_types|tojson }};
 const INDUSTRIES = {{ industries|tojson }};
 
-// File input handling
-document.getElementById('csvFile').addEventListener('change', function(e) {
-  const fileName = e.target.files[0]?.name || 'Choose CSV file';
-  document.querySelector('.file-input-text').textContent = fileName;
+// All initialization and event listeners - set up when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  // File input handling
+  document.getElementById('csvFile').addEventListener('change', function(e) {
+    const fileName = e.target.files[0]?.name || 'Choose CSV file';
+    document.querySelector('.file-input-text').textContent = fileName;
+  });
+  
+  // Event listeners
+  document.getElementById("addRow").addEventListener("click", ()=> addRow());
+  document.getElementById("simulateBtn").addEventListener("click", simulate);
+  document.getElementById("suggestBtn").addEventListener("click", suggest);
+  
+  // Upload form event listener
+  document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    // Check if postJSON is available
+    if (typeof postJSON !== 'function') {
+      showNotification("System not ready. Please refresh the page.", "error");
+      return;
+    }
+    
+    const fd = new FormData(e.target);
+    
+    // Show loading state
+    const uploadBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = uploadBtn.textContent;
+    uploadBtn.textContent = 'Uploading...';
+    uploadBtn.disabled = true;
+    
+    try {
+      const res = await postJSON("/api/upload", fd);
+      if (!res.ok) { 
+        showNotification(res.error || "Upload failed", "error");
+        return; 
+      }
+      
+      await refreshSegments();
+      showNotification("Upload successful! Segment stats updated.", "success");
+      
+      // Reset file input
+      document.getElementById('csvFile').value = '';
+      document.querySelector('.file-input-text').textContent = 'Choose CSV file';
+    } catch (error) {
+      showNotification("Upload failed. Please try again.", "error");
+      console.error('Upload error:', error);
+    } finally {
+      uploadBtn.textContent = originalText;
+      uploadBtn.disabled = false;
+    }
+  });
+  
+  // Initialize with two rows and load segments
+  addRow();
+  addRow();
+  refreshSegments();
 });
 
 function addRow(eventType=EVENTS[0]||"", industry=INDUSTRIES[0]||"", reachouts=50) {
@@ -137,11 +190,22 @@ function addRow(eventType=EVENTS[0]||"", industry=INDUSTRIES[0]||"", reachouts=5
 
 async function refreshSegments() {
   try {
+    // Check if getJSON is available
+    if (typeof getJSON !== 'function') {
+      console.error('getJSON function not available');
+      return;
+    }
+    
     const d = await getJSON("/api/segments");
     const tb = document.querySelector("#segTable tbody");
+    if (!tb) {
+      console.error('Segment table tbody not found');
+      return;
+    }
+    
     tb.innerHTML = "";
     
-    if (d.segments.length === 0) {
+    if (d.segments && d.segments.length === 0) {
       tb.innerHTML = `
         <tr>
           <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
@@ -152,20 +216,32 @@ async function refreshSegments() {
       return;
     }
     
-    d.segments.forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><strong>${r.event_type}</strong></td>
-        <td>${r.industry}</td>
-        <td><span class="percentage">${(r.mean_resp*100).toFixed(1)}%</span></td>
-        <td><span class="percentage">${(r.mean_show*100).toFixed(1)}%</span></td>
-        <td><span class="percentage">${(r.mean_pipeline*100).toFixed(1)}%</span></td>
-        <td><span class="number">${r.outreach_sum}</span></td>
-      `;
-      tb.appendChild(tr);
-    });
+    if (d.segments) {
+      d.segments.forEach(r => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${r.event_type}</strong></td>
+          <td>${r.industry}</td>
+          <td><span class="percentage">${(r.mean_resp*100).toFixed(1)}%</span></td>
+          <td><span class="percentage">${(r.mean_show*100).toFixed(1)}%</span></td>
+          <td><span class="percentage">${(r.mean_pipeline*100).toFixed(1)}%</span></td>
+          <td><span class="number">${r.outreach_sum}</span></td>
+        `;
+        tb.appendChild(tr);
+      });
+    }
   } catch (error) {
     console.error('Error refreshing segments:', error);
+    const tb = document.querySelector("#segTable tbody");
+    if (tb) {
+      tb.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+            Error loading segments. Please refresh the page.
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
@@ -178,6 +254,12 @@ function readPlan() {
 }
 
 async function simulate() {
+  // Check if postJSON is available
+  if (typeof postJSON !== 'function') {
+    showNotification("System not ready. Please refresh the page.", "error");
+    return;
+  }
+  
   const plan = readPlan();
   if (!plan.length) { 
     showNotification("Add at least one plan row.", "error");
@@ -226,6 +308,12 @@ async function simulate() {
 }
 
 async function suggest() {
+  // Check if postJSON is available
+  if (typeof postJSON !== 'function') {
+    showNotification("System not ready. Please refresh the page.", "error");
+    return;
+  }
+  
   const plan = readPlan();
   if (!plan.length) { 
     showNotification("Add at least one plan row.", "error");
@@ -310,46 +398,6 @@ function showNotification(message, type = 'info') {
   }, 5000);
 }
 
-// Event listeners
-document.getElementById("addRow").addEventListener("click", ()=> addRow());
-document.getElementById("simulateBtn").addEventListener("click", simulate);
-document.getElementById("suggestBtn").addEventListener("click", suggest);
 
-document.getElementById("uploadForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const fd = new FormData(e.target);
-  
-  // Show loading state
-  const uploadBtn = e.target.querySelector('button[type="submit"]');
-  const originalText = uploadBtn.textContent;
-  uploadBtn.textContent = 'Uploading...';
-  uploadBtn.disabled = true;
-  
-  try {
-    const res = await postJSON("/api/upload", fd);
-    if (!res.ok) { 
-      showNotification(res.error || "Upload failed", "error");
-      return; 
-    }
-    
-    await refreshSegments();
-    showNotification("Upload successful! Segment stats updated.", "success");
-    
-    // Reset file input
-    document.getElementById('csvFile').value = '';
-    document.querySelector('.file-input-text').textContent = 'Choose CSV file';
-  } catch (error) {
-    showNotification("Upload failed. Please try again.", "error");
-    console.error('Upload error:', error);
-  } finally {
-    uploadBtn.textContent = originalText;
-    uploadBtn.disabled = false;
-  }
-});
-
-// Initialize with two rows and load segments
-addRow();
-addRow();
-refreshSegments();
 </script>
 {% endblock %}

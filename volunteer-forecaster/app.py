@@ -39,17 +39,34 @@ def api_segments():
 @app.post("/api/simulate")
 def api_simulate():
     data = request.get_json(force=True) or {}
+    print(f"Received simulation request: {data}")  # Debug logging
+    
     target = int(data.get("target", 20))
     iters = int(data.get("iters", 10000))
     plan = data.get("plan", [])
+    
+    print(f"Target: {target}, Iterations: {iters}, Plan: {plan}")  # Debug logging
+    
     if not plan:
         return jsonify({"ok": False, "error": "Plan is empty"}), 400
+    
     try:
+        print(f"Calling simulate_shows with plan: {plan}")  # Debug logging
+        print(f"SEG shape: {SEG.shape}")  # Debug logging
+        print(f"SEG columns: {list(SEG.columns)}")  # Debug logging
+        
         res = simulate_shows(plan, SEG, iters=iters, seed=0)
+        print(f"Simulation result: {res}")  # Debug logging
+        
         pm = probability_metrics(res["totals"], target)
+        print(f"Probability metrics: {pm}")  # Debug logging
+        
+        return jsonify({"ok": True, "summary": res, "prob": pm})
     except Exception as e:
+        import traceback
+        print(f"Simulation error: {str(e)}")  # Debug logging
+        print(f"Traceback: {traceback.format_exc()}")  # Debug logging
         return jsonify({"ok": False, "error": str(e)}), 400
-    return jsonify({"ok": True, "summary": res, "prob": pm})
 
 @app.post("/api/suggest")
 def api_suggest():

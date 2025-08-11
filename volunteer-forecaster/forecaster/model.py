@@ -35,14 +35,18 @@ def simulate_shows(plan: List[Dict], seg_table: pd.DataFrame, iters: int = 10000
         totals += shows
 
     return {
-        "totals": totals,
+        "totals": totals.tolist(),  # Convert numpy array to Python list for JSON serialization
         "expected": float(np.mean(totals)),
         "p10": int(np.percentile(totals, 10)),
         "p50": int(np.percentile(totals, 50)),
         "p90": int(np.percentile(totals, 90)),
     }
 
-def probability_metrics(totals: np.ndarray, target: int) -> Dict:
+def probability_metrics(totals, target: int) -> Dict:
+    # Convert to numpy array if it's a list, or use as-is if it's already numpy
+    if isinstance(totals, list):
+        totals = np.array(totals)
+    
     hit = np.mean(totals >= target)
     over = np.mean(totals > target)
     return {"p_hit": float(hit), "p_overfill": float(over)}

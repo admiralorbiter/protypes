@@ -1,0 +1,179 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<section class="grid">
+  <div class="card">
+    <h3>Single Group Planner</h3>
+    <div class="row">
+      <label>Population N <input id="oneN" type="number" min="0" placeholder="e.g., 1200"></label>
+      <label>Confidence <select id="oneConf">
+        <option value="0.90">90%</option>
+        <option value="0.95" selected>95%</option>
+        <option value="0.99">99%</option>
+      </select></label>
+      <label>p estimate <input id="oneP" type="number" min="0" max="1" step="0.01" value="0.5"></label>
+      <label>Design effect <input id="oneDeff" type="number" min="1" step="0.01" value="1.0"></label>
+      <label>Response rate <input id="oneRR" type="number" min="0.01" max="1" step="0.01" value="0.6"></label>
+    </div>
+    <div class="row">
+      <label>Target MOE (±%) <input id="oneMOE" type="number" min="0.1" step="0.1" placeholder="e.g., 5.0"></label>
+      <span>or</span>
+      <label>Given completes n <input id="oneNcomp" type="number" min="1" step="1" placeholder="e.g., 385"></label>
+      <button id="oneCalc">Calculate</button>
+    </div>
+    <div id="oneOut">—</div>
+  </div>
+
+  <div class="card">
+    <h3>Multi-Group Planner</h3>
+    <div class="row">
+      <label>Confidence <select id="multiConf">
+        <option value="0.90">90%</option>
+        <option value="0.95" selected>95%</option>
+        <option value="0.99">99%</option>
+      </select></label>
+      <label>Mode
+        <select id="multiMode">
+          <option value="overall" selected>Overall MOE target</option>
+          <option value="per_group">Same MOE per group</option>
+        </select>
+      </label>
+      <label>MOE target (±%) <input id="multiMOE" type="number" min="0.5" step="0.1" value="5.0"></label>
+      <label>Allocation
+        <select id="multiAlloc">
+          <option value="proportional" selected>Proportional</option>
+          <option value="balanced">Balanced</option>
+          <option value="neyman">Neyman (optimal)</option>
+        </select>
+      </label>
+    </div>
+
+    <table id="groupTable">
+      <thead><tr><th>Name</th><th>N</th><th>p est</th><th>Design effect</th><th>Response rate</th><th>Min n</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row">
+      <button id="addGroup">Add group</button>
+      <button id="runMulti">Plan Allocation</button>
+    </div>
+    <div id="multiOut">—</div>
+  </div>
+
+  <div class="card">
+    <h3>A/B Difference in Proportions (Power)</h3>
+    <div class="row">
+      <label>Confidence <select id="abConf">
+        <option value="0.90">90%</option>
+        <option value="0.95" selected>95%</option>
+        <option value="0.99">99%</option>
+      </select></label>
+      <label>Power <input id="abPower" type="number" min="0.5" max="0.99" step="0.01" value="0.8"></label>
+      <label>Detectable Δ (abs) <input id="abDelta" type="number" min="0.01" step="0.01" value="0.05"></label>
+    </div>
+    <div class="row">
+      <label>p1 est <input id="abP1" type="number" min="0" max="1" step="0.01" value="0.5"></label>
+      <label>p2 est <input id="abP2" type="number" min="0" max="1" step="0.01" value="0.5"></label>
+      <label>Design effect A <input id="abDeff1" type="number" min="1" step="0.01" value="1.0"></label>
+      <label>Design effect B <input id="abDeff2" type="number" min="1" step="0.01" value="1.0"></label>
+    </div>
+    <div class="row">
+      <label>Pop N1 (optional) <input id="abN1" type="number" min="0"></label>
+      <label>Pop N2 (optional) <input id="abN2" type="number" min="0"></label>
+      <button id="abCalc">Calculate</button>
+    </div>
+    <div id="abOut">—</div>
+  </div>
+</section>
+
+<script>
+function addGroupRow(name="Campus A", N=800, p=0.5, deff=1.0, rr=0.6, min_n=0) {
+  const tb = document.querySelector("#groupTable tbody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = \`
+    <td><input class="g-name" value="\${name}"></td>
+    <td><input class="g-N" type="number" value="\${N}" min="0"></td>
+    <td><input class="g-p" type="number" value="\${p}" min="0" max="1" step="0.01"></td>
+    <td><input class="g-deff" type="number" value="\${deff}" min="1" step="0.01"></td>
+    <td><input class="g-rr" type="number" value="\${rr}" min="0.01" max="1" step="0.01"></td>
+    <td><input class="g-min" type="number" value="\${min_n}" min="0"></td>
+    <td><button class="del">✕</button></td>
+  \`;
+  tr.querySelector(".del").addEventListener("click", ()=> tr.remove());
+  tb.appendChild(tr);
+}
+
+document.getElementById("addGroup").addEventListener("click", ()=> addGroupRow());
+addGroupRow("Campus A", 800, 0.5, 1.0, 0.6, 0);
+addGroupRow("Campus B", 1200, 0.5, 1.0, 0.5, 0);
+addGroupRow("Campus C", 600, 0.5, 1.0, 0.55, 0);
+
+document.getElementById("oneCalc").addEventListener("click", async () => {
+  const N = parseInt(document.getElementById("oneN").value || "0", 10);
+  const conf = parseFloat(document.getElementById("oneConf").value || "0.95");
+  const p = parseFloat(document.getElementById("oneP").value || "0.5");
+  const deff = parseFloat(document.getElementById("oneDeff").value || "1.0");
+  const rr = parseFloat(document.getElementById("oneRR").value || "1.0");
+  const moeField = document.getElementById("oneMOE");
+  const nField = document.getElementById("oneNcomp");
+  const payload = { N: N>0?N:null, conf, p_est:p, deff, response_rate: rr };
+  if (moeField.value) payload.moe = parseFloat(moeField.value);
+  else if (nField.value) payload.n = parseInt(nField.value, 10);
+  else { alert("Enter either target MOE or given n."); return; }
+  const res = await postJSON("/api/one", payload);
+  if (!res.ok) { alert(res.error||"Error"); return; }
+  document.getElementById("oneOut").innerHTML = \`
+    <div><strong>Completes required:</strong> \${res.n_required}</div>
+    <div><strong>Invitations needed (@RR):</strong> \${res.invitations_needed}</div>
+    <div>Achieved MOE: <strong>\${(res.moe_achieved*100).toFixed(2)}%</strong> \${res.fpc_applied ? "(FPC applied)" : ""}</div>
+  \`;
+});
+
+document.getElementById("runMulti").addEventListener("click", async () => {
+  const rows = [...document.querySelectorAll("#groupTable tbody tr")];
+  const groups = rows.map(tr => ({
+    name: tr.querySelector(".g-name").value || "Group",
+    N: parseInt(tr.querySelector(".g-N").value||"0",10),
+    p_est: parseFloat(tr.querySelector(".g-p").value||"0.5"),
+    deff: parseFloat(tr.querySelector(".g-deff").value||"1.0"),
+    response_rate: parseFloat(tr.querySelector(".g-rr").value||"1.0"),
+    min_n: parseInt(tr.querySelector(".g-min").value||"0",10)
+  })).filter(g => g.N>0);
+  if (!groups.length) { alert("Add at least one group with N>0"); return; }
+  const conf = parseFloat(document.getElementById("multiConf").value||"0.95");
+  const mode = document.getElementById("multiMode").value;
+  const target_moe = parseFloat(document.getElementById("multiMOE").value||"5.0");
+  const allocation = document.getElementById("multiAlloc").value;
+  const res = await postJSON("/api/multi", { groups, conf, mode, target_moe, allocation });
+  if (!res.ok) { alert(res.error||"Error"); return; }
+  const d = res;
+  let html = \`<div><strong>Total completes:</strong> \${d.total_n} | <strong>Total invites:</strong> \${d.total_invites}</div>
+              <div>Overall MOE: <strong>\${(d.overall_moe*100).toFixed(2)}%</strong> (Allocation: \${d.allocation}, Mode: \${d.mode})</div>\`;
+  html += "<table><thead><tr><th>Group</th><th>N</th><th>p est</th><th>Deff</th><th>RR</th><th>n required</th><th>Invites</th></tr></thead><tbody>";
+  d.per_group.forEach(g => {
+    html += \`<tr><td>\${g.name}</td><td>\${g.N}</td><td>\${(g.p_est).toFixed(2)}</td><td>\${g.deff.toFixed(2)}</td><td>\${(g.response_rate*100).toFixed(0)}%</td><td><strong>\${g.n_required}</strong></td><td>\${g.invitations_needed}</td></tr>\`;
+  });
+  html += "</tbody></table>";
+  document.getElementById("multiOut").innerHTML = html;
+});
+
+document.getElementById("abCalc").addEventListener("click", async () => {
+  const conf = parseFloat(document.getElementById("abConf").value||"0.95");
+  const power = parseFloat(document.getElementById("abPower").value||"0.8");
+  const delta = parseFloat(document.getElementById("abDelta").value||"0.05");
+  const p1 = parseFloat(document.getElementById("abP1").value||"0.5");
+  const p2 = parseFloat(document.getElementById("abP2").value||"0.5");
+  const d1 = parseFloat(document.getElementById("abDeff1").value||"1.0");
+  const d2 = parseFloat(document.getElementById("abDeff2").value||"1.0");
+  const N1 = document.getElementById("abN1").value ? parseInt(document.getElementById("abN1").value,10) : null;
+  const N2 = document.getElementById("abN2").value ? parseInt(document.getElementById("abN2").value,10) : null;
+  const res = await postJSON("/api/ab", { conf, power, delta, p1_est:p1, p2_est:p2, deff1:d1, deff2:d2, N1, N2 });
+  if (!res.ok) { alert(res.error||"Error"); return; }
+  document.getElementById("abOut").innerHTML = \`
+    <div><strong>n per group:</strong> Group A = \${res.n_group1}, Group B = \${res.n_group2}</div>
+    <div><em>Note:</em> power-based sizing for difference in proportions, with design effects and optional FPC.</div>
+  \`;
+});
+</script>
+
+{% endblock %}
