@@ -1,42 +1,121 @@
 
-# Survey Sample Size & MOE Planner (Flask)
+# Survey Sample Size & MOE Planner
 
-A practical planner for finding how many **survey completes** you need to achieve a target **margin of error (MOE)** at a chosen confidence level, with **finite population correction (FPC)**. Includes a **multi-group** allocator and a **power-based A/B (difference in proportions)** calculator.
+A professional web application for planning survey sample sizes with comprehensive statistical analysis capabilities.
 
 ## Features
-- **Single group**: compute required completes *or* the MOE you get for a given n.
-- **Finite population correction** and **design effect** multiplier.
-- **Response rate** adjustment → **invitations needed**.
-- **Multi-group planner**:
-  - Target an **overall MOE** (with proportional / balanced / Neyman allocation) or
-  - Same **per-group MOE** (size each stratum individually).
-  - Shows per-group completes and invites.
-- **A/B difference in proportions**: power-based n per group (optional FPC).
 
-## Quick start
-```bash
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-source .venv/bin/activate
-pip install flask
-python app.py
-# open http://127.0.0.1:5000/
-```
+### 🎯 Single Group Planner
+- Calculate required sample size for target margin of error
+- Reverse calculation: find MOE for given sample size
+- Finite population correction (FPC) support
+- Design effect adjustments for complex sampling
+- Response rate planning
 
-## Formulas (overview)
-- **Single group, target MOE e**: \( n_0 = Z^2 p(1-p) / e^2 \). Apply **design effect** (`deff`) and **FPC**: \( n = \frac{n_0\cdot deff \cdot N}{n_0\cdot deff + (N-1)} \).
-- **MOE from n**: \( e = Z \sqrt{\frac{p(1-p)}{n/deff}} \sqrt{\frac{N-n}{N-1}} \).
-- **Overall MOE (stratified)**: \( Var(\hat p) = \sum_h W_h^2 \cdot \frac{p_h(1-p_h)}{n_h/deff_h} \cdot (1 - f_h) \), with \( W_h=N_h/N \), \( f_h = n_h/N_h \); MOE = Z√Var.
-- **Neyman allocation** (approx): \( n_h \propto N_h \cdot S_h \cdot \sqrt{deff_h} \) with \( S_h = \sqrt{p_h(1-p_h)} \).
+### 👥 Multi-Group Planner
+- Plan sample sizes across multiple population groups
+- Multiple allocation strategies:
+  - **Proportional**: Sample size proportional to group size
+  - **Balanced**: Equal sample sizes per group
+  - **Neyman**: Optimal allocation based on group variances
+- Overall MOE targeting or per-group precision
+- Dynamic group management
 
-> Defaults to **worst-case p=0.5** if unknown.
+### 🔬 A/B Testing Power Analysis
+- Sample size calculation for detecting differences in proportions
+- Configurable confidence levels and statistical power
+- Design effect support for both groups
+- Optional finite population correction
 
-## Notes
-- Normal approximation is used; for very small n or extreme p, exact methods (Wilson/Clopper-Pearson) differ.
-- Design effect (>1) inflates required n to account for clustering/weights.
-- Response rate only rescales **invites**; it doesn’t change sampling variance.
+## UI Improvements
 
-## Next steps
-- Support MOE for **means** (with sigma estimate).
-- Import/export **group rows** via CSV.
-- Show **MOE vs n** curve and **invites vs RR** sensitivity.
+### Enhanced User Experience
+- **Tooltips & Help Text**: Hover over any field for detailed explanations
+- **Example Values**: Practical examples for each input field
+- **Visual Feedback**: Modern card-based design with hover effects
+- **Responsive Layout**: Works seamlessly on desktop and mobile devices
+- **Better Typography**: Inter font for improved readability
+
+### Improved Results Display
+- **Structured Results**: Clear, organized presentation of calculations
+- **Color-Coded Output**: Success indicators and information boxes
+- **Detailed Explanations**: Context for each result value
+- **Smooth Scrolling**: Automatic focus on results when they appear
+
+### Professional Styling
+- **Dark Theme**: Easy on the eyes for extended use
+- **Gradient Accents**: Modern visual appeal
+- **Card Animations**: Subtle hover effects and transitions
+- **Consistent Spacing**: Professional layout and alignment
+
+## Technical Details
+
+### Statistical Methods
+- Normal approximation for proportions
+- Finite population correction (FPC)
+- Design effect adjustments
+- Power analysis for hypothesis testing
+
+### Technologies
+- **Backend**: Flask (Python)
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Styling**: Custom CSS with CSS variables
+- **Fonts**: Inter (Google Fonts)
+
+## Getting Started
+
+1. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. **Run the Application**:
+   ```bash
+   python app.py
+   ```
+
+3. **Open in Browser**:
+   Navigate to `http://localhost:5000`
+
+## Usage Guide
+
+### Single Group Planning
+1. Enter your population size (or leave empty for infinite)
+2. Select confidence level (95% is standard)
+3. Estimate expected proportion (0.5 is most conservative)
+4. Set design effect (1.0 for simple random sampling)
+5. Specify expected response rate
+6. Choose either:
+   - Target MOE: Enter desired margin of error
+   - Given n: Enter existing sample size to calculate MOE
+7. Click "Calculate" to see results
+
+### Multi-Group Planning
+1. Configure confidence and planning mode
+2. Set target MOE and allocation strategy
+3. Add population groups with their parameters
+4. Click "Plan Allocation" to see optimal distribution
+
+### A/B Testing
+1. Set confidence level and desired power
+2. Specify detectable difference between groups
+3. Enter expected proportions for both groups
+4. Configure design effects if needed
+5. Add population sizes for FPC (optional)
+6. Calculate required sample sizes per group
+
+## Best Practices
+
+- **Sample Size**: Larger samples provide more precise estimates
+- **Confidence Level**: 95% is standard; higher levels require larger samples
+- **Design Effects**: Account for clustering, stratification, or other complex designs
+- **Response Rates**: Plan for realistic completion rates
+- **Proportions**: Use 0.5 when uncertain (most conservative estimate)
+
+## Contributing
+
+This tool is designed for researchers, survey professionals, and data scientists. Contributions to improve accuracy, usability, or add new statistical methods are welcome.
+
+## License
+
+Open source - feel free to use and modify for your research and professional needs.

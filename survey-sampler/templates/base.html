@@ -1,23 +1,39 @@
 
 <!doctype html>
-<html>
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Professional survey sample size calculator with margin of error planning, multi-group allocation, and A/B testing power analysis">
+    <meta name="keywords" content="survey, sample size, margin of error, power analysis, statistics, research">
     <title>Survey Sample Size & MOE Planner</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   </head>
   <body>
     <header>
       <h1>Survey Sample Size & MOE Planner</h1>
-      <p class="subtitle">Find the responses you need to achieve a target margin of error (with FPC), plan multi-group samples, and size A/B comparisons.</p>
+      <p class="subtitle">Professional tool for planning survey sample sizes with confidence intervals, multi-group allocation strategies, and statistical power analysis for A/B testing.</p>
     </header>
+    
     <main>
       {% block content %}{% endblock %}
     </main>
+    
     <footer>
-      <small>Formulas use normal approximation for proportions, finite-population correction, and optional design effect.</small>
+      <div style="max-width: 800px; margin: 0 auto;">
+        <p><strong>Formulas & Methods:</strong> Normal approximation for proportions, finite-population correction (FPC), and design effect adjustments for complex sampling designs.</p>
+        <p style="margin-top: 12px; font-size: 0.9rem; opacity: 0.7;">
+          Built for researchers, survey professionals, and data scientists who need reliable sample size planning tools.
+        </p>
+      </div>
     </footer>
+    
     <script>
       async function postJSON(url, data) {
         const res = await fetch(url, {
@@ -27,7 +43,34 @@
         });
         return res.json();
       }
-      function pct(x, d=2) { return (x*100).toFixed(d) + "%"; }
+      
+      function pct(x, d=2) { 
+        return (x*100).toFixed(d) + "%"; 
+      }
+      
+      // Add smooth scrolling and better UX
+      document.addEventListener('DOMContentLoaded', function() {
+        // Smooth scroll to results when they appear
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+              mutation.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && node.classList && node.classList.contains('result-box')) {
+                  node.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+              });
+            }
+          });
+        });
+        
+        // Observe all output containers
+        ['oneOut', 'multiOut', 'abOut'].forEach(id => {
+          const element = document.getElementById(id);
+          if (element) {
+            observer.observe(element, { childList: true });
+          }
+        });
+      });
     </script>
   </body>
 </html>
