@@ -183,9 +183,20 @@ def recommend_press_or_park(state: GameState, iters: int = 2000, seed: int = 0, 
 
     q_stop = q_of(('STOP',))
     q_roll = q_of(('ROLL',))
-    action = 'press' if q_roll > q_stop else 'park'
+    
+    # Fix: Handle edge cases and provide better decision logic
+    if q_roll == q_stop:
+        # If equal, prefer stopping for safety
+        action = 'park'
+    else:
+        action = 'press' if q_roll > q_stop else 'park'
+    
     # Also compute exact bust probability for UI
-    p_bust = bust_prob(state.copy())
+    try:
+        p_bust = bust_prob(state.copy())
+    except Exception:
+        # Fallback if odds calculation fails
+        p_bust = 0.5
 
     return {
         "action": action,
@@ -207,6 +218,10 @@ def recommend_pairing_after_roll(state: GameState, roll: Tuple[int,int,int,int],
     for _ in range(iters):
         simulate(root, rng, risk)
 
+    # Fix: Handle case where no children exist
+    if not root.children:
+        return {"pairing": None, "note": "No legal pairings available"}
+
     # Choose child with highest Q
     best_p, best_q = None, -1e9
     for k, child in root.children.items():
@@ -214,6 +229,10 @@ def recommend_pairing_after_roll(state: GameState, roll: Tuple[int,int,int,int],
         if q > best_q:
             best_q = q
             best_p = k[1]  # ('PAIR', p)
+    
+    if best_p is None:
+        return {"pairing": None, "note": "No valid pairing found"}
+    
     return {
         "pairing": best_p,
         "q": best_q

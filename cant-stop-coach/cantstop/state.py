@@ -62,3 +62,22 @@ class GameState:
 def new_game(num_players: int = 2) -> GameState:
     players = [PlayerState() for _ in range(num_players)]
     return GameState(players=players, num_players=num_players)
+
+def validate_game_state(state: GameState) -> List[str]:
+    """Validate game state and return list of errors/warnings."""
+    errors = []
+    
+    # Check that claimed columns match claimed_by
+    for player_idx, player in enumerate(state.players):
+        for col in player.claimed:
+            if state.claimed_by[col] != player_idx:
+                errors.append(f"Player {player_idx} claims column {col} but claimed_by says {state.claimed_by[col]}")
+    
+    # Check that active runners are valid
+    for col, pos in state.turn.active_runners.items():
+        if col in state.claimed_by and state.claimed_by[col] is not None:
+            errors.append(f"Active runner on claimed column {col}")
+        if pos > COLUMN_HEIGHTS[col]:
+            errors.append(f"Active runner on column {col} beyond height {pos} > {COLUMN_HEIGHTS[col]}")
+    
+    return errors

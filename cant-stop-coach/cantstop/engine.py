@@ -152,3 +152,18 @@ def turn_key_for_odds(state: GameState) -> tuple:
     active = tuple(sorted([(c, state.turn.active_runners[c] >= COLUMN_HEIGHTS[c]) for c in state.turn.active_runners.keys()]))
     free = state.turn.free_runners
     return (open_cols, active, free)
+
+def has_busted(state: GameState) -> bool:
+    """Check if the current player has busted (no legal pairings available)."""
+    if not state.turn.last_roll:
+        return False
+    return len(legal_pairings(state, state.turn.last_roll)) == 0
+
+def handle_bust(state: GameState) -> None:
+    """Handle a bust - player loses all progress and turn ends."""
+    # Clear all active runners (lose progress)
+    state.turn.active_runners.clear()
+    state.turn.last_roll = None
+    
+    # Switch to next player
+    state.current = (state.current + 1) % state.num_players
