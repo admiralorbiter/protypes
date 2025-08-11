@@ -3,19 +3,33 @@
 {% block content %}
 <section class="controls card">
   <div class="row">
-    <div>
+    <div class="card-selector">
       <label>Card A</label>
-      <select id="a_rank">{% for r in ranks %}<option value="{{r}}">{{r}}</option>{% endfor %}</select>
-      <select id="a_suit">{% for s in suits %}<option value="{{s}}">{{s}}</option>{% endfor %}</select>
+      <div class="card-inputs">
+        <select id="a_rank">{% for r in ranks %}<option value="{{r}}">{{r}}</option>{% endfor %}</select>
+        <select id="a_suit">{% for s in suits %}<option value="{{s}}">{{s}}</option>{% endfor %}</select>
+      </div>
+      <div id="card-a-visual" class="card-visual" style="margin-top: 8px;">
+        <span class="rank">A</span>
+        <span class="suit">♠</span>
+      </div>
     </div>
-    <div>
+    <div class="card-selector">
       <label>Card B</label>
-      <select id="b_rank">{% for r in ranks %}<option value="{{r}}" {% if r=='K' %}selected{% endif %}>{{r}}</option>{% endfor %}</select>
-      <select id="b_suit">{% for s in suits %}<option value="{{s}}">{{s}}</option>{% endfor %}</select>
+      <div class="card-inputs">
+        <select id="b_rank">{% for r in ranks %}<option value="{{r}}" {% if r=='K' %}selected{% endif %}>{{r}}</option>{% endfor %}</select>
+        <select id="b_suit">{% for s in suits %}<option value="{{s}}">{{s}}</option>{% endfor %}</select>
+      </div>
+      <div id="card-b-visual" class="card-visual" style="margin-top: 8px;">
+        <span class="rank">K</span>
+        <span class="suit">♥</span>
+      </div>
     </div>
-    <div>
+    <div class="card-selector">
       <label>Opponents</label>
       <input id="opps" type="number" min="1" max="8" value="1">
+    </div>
+    <div class="card-selector">
       <label>Iterations</label>
       <input id="iters" type="number" min="500" step="500" value="3000">
     </div>
@@ -24,71 +38,321 @@
       <button id="evalBtn">Evaluate</button>
     </div>
   </div>
+  
+  <!-- Progress indicator -->
+  <div id="progressContainer" class="progress-container" style="display: none;">
+    <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+  </div>
 </section>
 
 <section class="results grid">
-  <div class="card">
+  <div class="card results-card">
     <h3>Recommendation</h3>
     <div id="rec">—</div>
   </div>
-  <div class="card">
+  <div class="card results-card">
     <h3>Preflop Equity</h3>
     <div id="eq">—</div>
   </div>
-  <div class="card">
+  <div class="card results-card">
     <h3>Flop Odds (Combinatorics)</h3>
-    <table id="oddsTable">
-      <thead><tr><th>Event</th><th>Probability</th></tr></thead>
-      <tbody></tbody>
-    </table>
+    <div class="odds-table-container">
+      <table id="oddsTable">
+        <thead><tr><th>Event</th><th>Probability</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    
+    <!-- Stats summary -->
+    <div id="statsSummary" class="stats-summary" style="display: none;">
+      <div class="stat-item">
+        <span class="stat-value" id="bestFlop">—</span>
+        <span class="stat-label">Best Flop</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="drawChance">—</span>
+        <span class="stat-label">Draw Chance</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="madeHand">—</span>
+        <span class="stat-label">Made Hand</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value" id="totalOdds">—</span>
+        <span class="stat-label">Total Odds</span>
+      </div>
+    </div>
   </div>
 </section>
 
 <script>
-async function evaluate() {
-  const payload = {
-    a_rank: document.getElementById('a_rank').value,
-    a_suit: document.getElementById('a_suit').value,
-    b_rank: document.getElementById('b_rank').value,
-    b_suit: document.getElementById('b_suit').value,
-    opponents: parseInt(document.getElementById('opps').value || "1", 10),
-    iters: parseInt(document.getElementById('iters').value || "3000", 10)
-  };
-  const res = await postJSON('/api/evaluate', payload);
-  if (!res.ok) { alert(res.error || "Error"); return; }
-  document.getElementById('eq').innerText = pct(res.equity);
-  document.getElementById('rec').innerHTML = "<strong>" + res.recommendation.action + "</strong><br><small>" + res.recommendation.explanation + " (breakeven ~ " + res.recommendation.threshold + ")</small>";
-  const tbody = document.querySelector('#oddsTable tbody');
-  tbody.innerHTML = "";
-  const nice = {
-    set_only: "Flop a set (pocket pair only)",
-    quads: "Flop quads (pocket pair only)",
-    set_or_better: "Flop set or better (pocket pair only)",
-    pair_or_better: "Flop a pair or better (unpaired only)",
-    two_pair: "Flop two pair (unpaired only)",
-    trips: "Flop trips (unpaired only)",
-    flush_flop: "Flop a flush (two suited)",
-    flush_draw: "Flop a flush draw (two suited)",
-    backdoor_flush: "Backdoor flush draw (two suited)",
-    flush_by_river: "Flush by river (two suited)",
-    approx_oesd_flop: "Approx. OESD on flop (true connectors)"
-  };
-  Object.entries(res.odds).forEach(([k,v]) => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = "<td>"+(nice[k]||k)+"</td><td>"+pct(v, 2)+"</td>";
-    tbody.appendChild(tr);
-  });
+let isLoading = false;
+
+// Card suit symbols mapping
+const suitSymbols = {
+  'h': '♥', 'd': '♦', 'c': '♣', 's': '♠'
+};
+
+// Update visual card representation
+function updateCardVisual(cardId, rank, suit) {
+  const visual = document.getElementById(cardId);
+  const rankSpan = visual.querySelector('.rank');
+  const suitSpan = visual.querySelector('.suit');
+  
+  rankSpan.textContent = rank;
+  suitSpan.textContent = suitSymbols[suit] || suit;
+  
+  // Update card color based on suit
+  visual.className = 'card-visual';
+  if (suit === 'h' || suit === 'd') {
+    visual.classList.add('hearts');
+  } else {
+    visual.classList.add('clubs');
+  }
 }
 
+function setLoading(loading) {
+  isLoading = loading;
+  const controls = document.querySelector('.controls');
+  const evalBtn = document.getElementById('evalBtn');
+  const progressContainer = document.getElementById('progressContainer');
+  
+  if (loading) {
+    controls.classList.add('loading');
+    evalBtn.textContent = 'Calculating...';
+    evalBtn.disabled = true;
+    progressContainer.style.display = 'block';
+    
+    // Animate progress bar
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress > 90) progress = 90;
+      progressBar.style.width = progress + '%';
+    }, 100);
+    
+    // Store interval for cleanup
+    progressContainer.dataset.interval = interval;
+  } else {
+    controls.classList.remove('loading');
+    evalBtn.textContent = 'Evaluate';
+    evalBtn.disabled = false;
+    
+    // Complete progress bar
+    const progressBar = document.getElementById('progressBar');
+    progressBar.style.width = '100%';
+    
+    // Hide progress after animation
+    setTimeout(() => {
+      progressContainer.style.display = 'none';
+      progressBar.style.width = '0%';
+    }, 500);
+    
+    // Clear interval
+    if (progressContainer.dataset.interval) {
+      clearInterval(parseInt(progressContainer.dataset.interval));
+    }
+  }
+}
+
+async function evaluate() {
+  if (isLoading) return;
+  
+  setLoading(true);
+  
+  try {
+    const payload = {
+      a_rank: document.getElementById('a_rank').value,
+      a_suit: document.getElementById('a_suit').value,
+      b_rank: document.getElementById('b_rank').value,
+      b_suit: document.getElementById('b_suit').value,
+      opponents: parseInt(document.getElementById('opps').value || "1", 10),
+      iters: parseInt(document.getElementById('iters').value || "3000", 10)
+    };
+    
+    const res = await postJSON('/api/evaluate', payload);
+    if (!res.ok) { 
+      alert(res.error || "Error"); 
+      return; 
+    }
+    
+    // Update equity display with hand strength indicator
+    const equity = res.equity;
+    let strengthClass, strengthText;
+    if (equity > 0.6) {
+      strengthClass = 'strong';
+      strengthText = 'Strong Hand';
+    } else if (equity > 0.45) {
+      strengthClass = 'decent';
+      strengthText = 'Decent Hand';
+    } else {
+      strengthClass = 'weak';
+      strengthText = 'Weak Hand';
+    }
+    
+    document.getElementById('eq').innerHTML = `
+      <div style="font-size: 3rem; font-weight: 700; color: var(--accent);">${pct(equity)}</div>
+      <div class="hand-strength ${strengthClass}">${strengthText}</div>
+    `;
+    
+    // Update recommendation display with better formatting and status indicator
+    const recElement = document.getElementById('rec');
+    const action = res.recommendation.action;
+    const statusClass = action === 'RAISE' ? 'raise' : action === 'CALL' ? 'call' : 'fold';
+    
+    recElement.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 12px;">
+        <span class="status-indicator ${statusClass}"></span>
+        <strong style="font-size: 2.5rem;">${action}</strong>
+      </div>
+      <small style="display: block; text-align: center; line-height: 1.4;">
+        ${res.recommendation.explanation}<br>
+        <span style="opacity: 0.8;">Breakeven threshold: ${res.recommendation.threshold}</span>
+      </small>
+    `;
+    
+    // Add color coding based on recommendation
+    recElement.className = '';
+    if (action === 'RAISE') {
+      recElement.style.color = 'var(--pos)';
+      recElement.style.borderColor = 'var(--pos)';
+    } else if (action === 'FOLD') {
+      recElement.style.color = 'var(--neg)';
+      recElement.style.borderColor = 'var(--neg)';
+    } else {
+      recElement.style.color = 'var(--accent)';
+      recElement.style.borderColor = 'var(--accent)';
+    }
+    
+    // Update odds table with probability bars
+    const tbody = document.querySelector('#oddsTable tbody');
+    tbody.innerHTML = "";
+    
+    const nice = {
+      set_only: "Flop a set (pocket pair only)",
+      quads: "Flop quads (pocket pair only)",
+      set_or_better: "Flop set or better (pocket pair only)",
+      pair_or_better: "Flop a pair or better (unpaired only)",
+      two_pair: "Flop two pair (unpaired only)",
+      trips: "Flop trips (unpaired only)",
+      flush_flop: "Flop a flush (two suited)",
+      flush_draw: "Flop a flush draw (two suited)",
+      backdoor_flush: "Backdoor flush draw (two suited)",
+      flush_by_river: "Flush by river (two suited)",
+      approx_oesd_flop: "Approx. OESD on flop (true connectors)"
+    };
+    
+    let bestFlop = 0;
+    let drawChance = 0;
+    let madeHand = 0;
+    let totalOdds = 0;
+    
+    Object.entries(res.odds).forEach(([k,v]) => {
+      const tr = document.createElement('tr');
+      const probability = pct(v, 2);
+      
+      // Add color coding for high probabilities
+      let colorClass = '';
+      if (v > 0.3) colorClass = 'style="color: var(--pos)"';
+      else if (v > 0.1) colorClass = 'style="color: var(--accent)"';
+      
+      tr.innerHTML = `
+        <td>${nice[k] || k}</td>
+        <td ${colorClass}>
+          ${probability}
+          <div class="probability-bar">
+            <div class="probability-fill" style="width: ${v * 100}%"></div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      
+      // Calculate stats
+      if (v > bestFlop) bestFlop = v;
+      if (k.includes('draw') || k.includes('backdoor')) drawChance += v;
+      if (k.includes('flush') || k.includes('set') || k.includes('pair') || k.includes('trips') || k.includes('quads')) madeHand += v;
+      totalOdds += v;
+    });
+    
+    // Update stats summary
+    document.getElementById('bestFlop').textContent = pct(bestFlop);
+    document.getElementById('drawChance').textContent = pct(drawChance);
+    document.getElementById('madeHand').textContent = pct(madeHand);
+    document.getElementById('totalOdds').textContent = pct(totalOdds);
+    document.getElementById('statsSummary').style.display = 'grid';
+    
+  } catch (error) {
+    console.error('Evaluation error:', error);
+    alert('An error occurred during evaluation');
+  } finally {
+    setLoading(false);
+  }
+}
+
+// Update card visuals when selections change
+document.getElementById('a_rank').addEventListener('change', function() {
+  updateCardVisual('card-a-visual', this.value, document.getElementById('a_suit').value);
+});
+
+document.getElementById('a_suit').addEventListener('change', function() {
+  updateCardVisual('card-a-visual', document.getElementById('a_rank').value, this.value);
+});
+
+document.getElementById('b_rank').addEventListener('change', function() {
+  updateCardVisual('card-b-visual', this.value, document.getElementById('b_suit').value);
+});
+
+document.getElementById('b_suit').addEventListener('change', function() {
+  updateCardVisual('card-b-visual', document.getElementById('b_rank').value, this.value);
+});
+
 document.getElementById('evalBtn').addEventListener('click', evaluate);
+
 document.getElementById('randomBtn').addEventListener('click', async () => {
-  const res = await postJSON('/api/random_hand', {});
-  const a = res.a, b = res.b;
-  document.getElementById('a_rank').value = a[0];
-  document.getElementById('a_suit').value = a[1];
-  document.getElementById('b_rank').value = b[0];
-  document.getElementById('b_suit').value = b[1];
-  evaluate();
+  if (isLoading) return;
+  
+  try {
+    const res = await postJSON('/api/random_hand', {});
+    const a = res.a, b = res.b;
+    document.getElementById('a_rank').value = a[0];
+    document.getElementById('a_suit').value = a[1];
+    document.getElementById('b_rank').value = b[0];
+    document.getElementById('b_suit').value = b[1];
+    
+    // Update visual cards
+    updateCardVisual('card-a-visual', a[0], a[1]);
+    updateCardVisual('card-b-visual', b[0], b[1]);
+    
+    // Auto-evaluate after random hand
+    evaluate();
+  } catch (error) {
+    console.error('Random hand error:', error);
+    alert('Failed to get random hand');
+  }
+});
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !isLoading) {
+    evaluate();
+  } else if (e.key === 'r' && !isLoading) {
+    document.getElementById('randomBtn').click();
+  }
+});
+
+// Initial setup
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize card visuals
+  updateCardVisual('card-a-visual', 'A', 's');
+  updateCardVisual('card-b-visual', 'K', 'h');
+  
+  // Small delay to ensure everything is loaded
+  setTimeout(() => {
+    if (document.getElementById('a_rank').value && document.getElementById('b_rank').value) {
+      evaluate();
+    }
+  }, 100);
 });
 </script>
 {% endblock %}
