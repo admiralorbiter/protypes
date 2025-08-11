@@ -1,0 +1,94 @@
+
+{% extends "base.html" %}
+{% block content %}
+<section class="controls card">
+  <div class="row">
+    <div>
+      <label>Card A</label>
+      <select id="a_rank">{% for r in ranks %}<option value="{{r}}">{{r}}</option>{% endfor %}</select>
+      <select id="a_suit">{% for s in suits %}<option value="{{s}}">{{s}}</option>{% endfor %}</select>
+    </div>
+    <div>
+      <label>Card B</label>
+      <select id="b_rank">{% for r in ranks %}<option value="{{r}}" {% if r=='K' %}selected{% endif %}>{{r}}</option>{% endfor %}</select>
+      <select id="b_suit">{% for s in suits %}<option value="{{s}}">{{s}}</option>{% endfor %}</select>
+    </div>
+    <div>
+      <label>Opponents</label>
+      <input id="opps" type="number" min="1" max="8" value="1">
+      <label>Iterations</label>
+      <input id="iters" type="number" min="500" step="500" value="3000">
+    </div>
+    <div class="buttons">
+      <button id="randomBtn">Deal Random</button>
+      <button id="evalBtn">Evaluate</button>
+    </div>
+  </div>
+</section>
+
+<section class="results grid">
+  <div class="card">
+    <h3>Recommendation</h3>
+    <div id="rec">—</div>
+  </div>
+  <div class="card">
+    <h3>Preflop Equity</h3>
+    <div id="eq">—</div>
+  </div>
+  <div class="card">
+    <h3>Flop Odds (Combinatorics)</h3>
+    <table id="oddsTable">
+      <thead><tr><th>Event</th><th>Probability</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+async function evaluate() {
+  const payload = {
+    a_rank: document.getElementById('a_rank').value,
+    a_suit: document.getElementById('a_suit').value,
+    b_rank: document.getElementById('b_rank').value,
+    b_suit: document.getElementById('b_suit').value,
+    opponents: parseInt(document.getElementById('opps').value || "1", 10),
+    iters: parseInt(document.getElementById('iters').value || "3000", 10)
+  };
+  const res = await postJSON('/api/evaluate', payload);
+  if (!res.ok) { alert(res.error || "Error"); return; }
+  document.getElementById('eq').innerText = pct(res.equity);
+  document.getElementById('rec').innerHTML = "<strong>" + res.recommendation.action + "</strong><br><small>" + res.recommendation.explanation + " (breakeven ~ " + res.recommendation.threshold + ")</small>";
+  const tbody = document.querySelector('#oddsTable tbody');
+  tbody.innerHTML = "";
+  const nice = {
+    set_only: "Flop a set (pocket pair only)",
+    quads: "Flop quads (pocket pair only)",
+    set_or_better: "Flop set or better (pocket pair only)",
+    pair_or_better: "Flop a pair or better (unpaired only)",
+    two_pair: "Flop two pair (unpaired only)",
+    trips: "Flop trips (unpaired only)",
+    flush_flop: "Flop a flush (two suited)",
+    flush_draw: "Flop a flush draw (two suited)",
+    backdoor_flush: "Backdoor flush draw (two suited)",
+    flush_by_river: "Flush by river (two suited)",
+    approx_oesd_flop: "Approx. OESD on flop (true connectors)"
+  };
+  Object.entries(res.odds).forEach(([k,v]) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = "<td>"+(nice[k]||k)+"</td><td>"+pct(v, 2)+"</td>";
+    tbody.appendChild(tr);
+  });
+}
+
+document.getElementById('evalBtn').addEventListener('click', evaluate);
+document.getElementById('randomBtn').addEventListener('click', async () => {
+  const res = await postJSON('/api/random_hand', {});
+  const a = res.a, b = res.b;
+  document.getElementById('a_rank').value = a[0];
+  document.getElementById('a_suit').value = a[1];
+  document.getElementById('b_rank').value = b[0];
+  document.getElementById('b_suit').value = b[1];
+  evaluate();
+});
+</script>
+{% endblock %}

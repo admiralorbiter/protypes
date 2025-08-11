@@ -1,0 +1,33 @@
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Preflop Poker Trainer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>Preflop Poker Trainer</h1>
+      <p class="subtitle">Two hole cards → odds & a simple raise/call/fold recommendation</p>
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+    <footer>
+      <small>Educational toy — ignores position, stack sizes, bet sizing, and ranges. Uses Monte Carlo for equity and combinatorics for flop odds.</small>
+    </footer>
+    <script>
+      async function postJSON(url, data) {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data || {})
+        });
+        return res.json();
+      }
+      function pct(x, d=1) { return (x*100).toFixed(d) + "%"; }
+    </script>
+  </body>
+</html>
