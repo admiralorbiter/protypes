@@ -1,0 +1,43 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>Conway’s Game of Life</h1>
+<p class="lead">
+  A zero-player game where simple rules create rich, emergent behavior.
+</p>
+
+<div class="panel">
+  <div class="controls">
+    <label>Grid:
+      <input type="number" id="lifeCols" min="10" max="200" value="80"> ×
+      <input type="number" id="lifeRows" min="10" max="200" value="50">
+    </label>
+    <label>Speed (ms / step):
+      <input type="number" id="lifeSpeed" min="10" max="1000" value="120">
+    </label>
+    <button id="lifeStart" class="btn">Start</button>
+    <button id="lifeStep" class="btn">Step</button>
+    <button id="lifePause" class="btn">Pause</button>
+    <button id="lifeRandom" class="btn">Randomize</button>
+    <button id="lifeClear" class="btn">Clear</button>
+  </div>
+</div>
+
+<div class="panel">
+  <canvas id="lifeCanvas" width="900" height="560" class="chart"></canvas>
+  <p class="muted">Click cells to toggle life/death.</p>
+</div>
+
+<section class="theory">
+  <h2>Rules</h2>
+  <ul>
+    <li>Any live cell with 2 or 3 live neighbors survives.</li>
+    <li>Any dead cell with exactly 3 live neighbors becomes alive.</li>
+    <li>All other live cells die in the next generation; all other dead cells remain dead.</li>
+  </ul>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/life.js') }}"></script>
+{% endblock %}

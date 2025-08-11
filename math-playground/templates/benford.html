@@ -1,0 +1,47 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>Benford’s Law</h1>
+<p class="lead">
+  In many naturally occurring datasets, the first digit is 1 far more often than 9.
+  Try different generators and compare observed digit frequencies to Benford’s expected proportions.
+</p>
+
+<div class="panel">
+  <form id="benfordForm" class="controls">
+    <label>Generator:
+      <select id="bdGen">
+        <option value="loguniform" selected>Log-uniform (Benford-like)</option>
+        <option value="exponential">Exponential(1)</option>
+        <option value="uniform">Uniform(1..1e6)</option>
+      </select>
+    </label>
+    <label>Samples (n):
+      <input type="number" id="bdN" min="100" max="200000" value="5000">
+    </label>
+    <button type="submit" class="btn">Run</button>
+  </form>
+</div>
+
+<div class="panel">
+  <div class="flex">
+    <div>
+      <h3>Counts</h3>
+      <ul id="bdStats" class="stats"></ul>
+    </div>
+    <canvas id="bdChart" width="700" height="420" class="chart"></canvas>
+  </div>
+</div>
+
+<section class="theory">
+  <h2>Why it happens</h2>
+  <p>
+    Benford’s law often appears in data that spans several orders of magnitude and is roughly scale-invariant.
+    It is used in audit and fraud detection as a rough heuristic.
+  </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/benford.js') }}"></script>
+{% endblock %}

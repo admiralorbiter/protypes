@@ -1,0 +1,41 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Math Playground</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/favicon.svg') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a class="logo" href="{{ url_for('index') }}">Math Playground</a>
+      <nav class="nav">
+        <a href="{{ url_for('birthday') }}">Birthday</a>
+        <a href="{{ url_for('monty') }}">Monty Hall</a>
+        <a href="{{ url_for('clt') }}">CLT</a>
+        <a href="{{ url_for('benford') }}">Benford</a>
+        <a href="{{ url_for('lln') }}">LLN</a>
+        <a href="{{ url_for('life') }}">Game of Life</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>Built for learning — no external libraries or CDNs.</p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

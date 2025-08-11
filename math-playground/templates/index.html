@@ -1,0 +1,35 @@
+
+{% extends "base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>Interactive math & stats demos</h1>
+  <p>Explore counterintuitive probabilities, sample distributions, emergent behavior, and more — all in your browser.</p>
+</section>
+
+<section class="grid">
+  <a class="card" href="{{ url_for('birthday') }}">
+    <h3>Birthday Paradox</h3>
+    <p>How large must a group be before two people share a birthday?</p>
+  </a>
+  <a class="card" href="{{ url_for('monty') }}">
+    <h3>Monty Hall</h3>
+    <p>Should you switch doors? Simulate to see the difference.</p>
+  </a>
+  <a class="card" href="{{ url_for('clt') }}">
+    <h3>Central Limit Theorem</h3>
+    <p>Watch sample means form a normal distribution.</p>
+  </a>
+  <a class="card" href="{{ url_for('benford') }}">
+    <h3>Benford’s Law</h3>
+    <p>First-digit frequencies from different generators.</p>
+  </a>
+  <a class="card" href="{{ url_for('lln') }}">
+    <h3>Law of Large Numbers</h3>
+    <p>Running mean of a biased coin converges to its bias.</p>
+  </a>
+  <a class="card" href="{{ url_for('life') }}">
+    <h3>Conway’s Game of Life</h3>
+    <p>Complex patterns from simple rules — entirely client-side.</p>
+  </a>
+</section>
+{% endblock %}

@@ -1,0 +1,45 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>Birthday Paradox</h1>
+<p class="lead">
+  In a group of <em>n</em> people, the chance that at least two share a birthday grows surprisingly fast.
+  This page compares the exact probability with a Monte Carlo simulation.
+</p>
+
+<div class="panel">
+  <form id="birthdayForm" class="controls">
+    <label>Group size:
+      <input type="range" id="bGroup" min="2" max="100" value="23" step="1" oninput="document.getElementById('bGroupVal').textContent=this.value">
+      <span class="value" id="bGroupVal">23</span>
+    </label>
+    <label>Trials:
+      <input type="range" id="bTrials" min="100" max="20000" value="5000" step="100" oninput="document.getElementById('bTrialsVal').textContent=this.value">
+      <span class="value" id="bTrialsVal">5000</span>
+    </label>
+    <button type="submit" class="btn">Run</button>
+  </form>
+</div>
+
+<div class="panel">
+  <div class="flex">
+    <div>
+      <h3>Results</h3>
+      <ul id="bStats" class="stats"></ul>
+    </div>
+    <canvas id="bChart" width="600" height="360" class="chart"></canvas>
+  </div>
+</div>
+
+<section class="theory">
+  <h2>Theory</h2>
+  <p>
+    Probability of <strong>no</strong> shared birthdays: Π<sub>k=0..n-1</sub> (365 − k)/365.
+    The paradox is how quickly the complementary probability 1 − Π(...) approaches 0.5; by n = 23 it’s about 50%.
+  </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/birthday.js') }}"></script>
+{% endblock %}

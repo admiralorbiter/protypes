@@ -1,0 +1,36 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>Law of Large Numbers</h1>
+<p class="lead">
+  Flip a biased coin many times and watch the running average converge to its true probability.
+</p>
+
+<div class="panel">
+  <form id="llnForm" class="controls">
+    <label>Bias p (P(Heads)):
+      <input type="number" id="lP" min="0" max="1" step="0.01" value="0.6">
+    </label>
+    <label>Flips:
+      <input type="number" id="lN" min="10" max="5000" value="1000">
+    </label>
+    <button type="submit" class="btn">Run</button>
+  </form>
+</div>
+
+<div class="panel">
+  <canvas id="lChart" width="800" height="420" class="chart"></canvas>
+</div>
+
+<section class="theory">
+  <h2>Strong vs. Weak LLN</h2>
+  <p>
+    The weak LLN says sample averages converge in probability to the expected value.
+    The strong LLN says they converge almost surely.
+  </p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/lln.js') }}"></script>
+{% endblock %}

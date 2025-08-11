@@ -1,0 +1,56 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1>Central Limit Theorem</h1>
+<p class="lead">
+  Sample averages of i.i.d. variables tend to a normal distribution as sample size grows — even when the underlying distribution isn’t normal.
+</p>
+
+<div class="panel">
+  <form id="cltForm" class="controls">
+    <label>Distribution:
+      <select id="cDist" onchange="toggleBernoulliP()">
+        <option value="uniform" selected>Uniform(0,1)</option>
+        <option value="exponential">Exponential(1)</option>
+        <option value="bernoulli">Bernoulli(p)</option>
+      </select>
+    </label>
+    <label id="cPLabel" style="display:none;">p (for Bernoulli):
+      <input type="number" id="cP" min="0" max="1" step="0.01" value="0.5">
+    </label>
+    <label>Sample size (n):
+      <input type="number" id="cN" min="1" max="400" value="30">
+    </label>
+    <label>Number of samples:
+      <input type="number" id="cNum" min="100" max="5000" value="1000">
+    </label>
+    <label>Bins:
+      <input type="number" id="cBins" min="10" max="60" value="25">
+    </label>
+    <button type="submit" class="btn">Run</button>
+  </form>
+</div>
+
+<div class="panel">
+  <div class="flex">
+    <div>
+      <h3>Summary</h3>
+      <ul id="cStats" class="stats"></ul>
+    </div>
+    <canvas id="cChart" width="700" height="420" class="chart"></canvas>
+  </div>
+</div>
+
+<section class="theory">
+  <h2>Notes</h2>
+  <ul>
+    <li>For Uniform(0,1): μ = 0.5, σ² = 1/12. For Exponential(1): μ = 1, σ² = 1.</li>
+    <li>For Bernoulli(p): μ = p, σ² = p(1−p). The std. dev. of sample mean is σ/√n.</li>
+    <li>The overlaid curve is the normal approximation using the theoretical μ and σ/√n.</li>
+  </ul>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/clt.js') }}"></script>
+{% endblock %}
