@@ -1,0 +1,122 @@
+
+{% extends "base.html" %}
+{% block content %}
+<section class="controls">
+  <div class="card">
+    <h3>Scenario Controls</h3>
+    <div class="row">
+      <label><input type="checkbox" id="legacy_on_private" checked> Legacy enabled at privates</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="test_required_private_elite"> Test-required at top private colleges</label>
+      <label>Count <input type="number" id="num_private_elites_test_required" value="4" min="1" max="12"></label>
+    </div>
+    <div class="row">
+      <label>First-gen reserve (%) <input type="number" id="reserve_first_gen" value="0" min="0" max="30"></label>
+      <label>Rural reserve (%) <input type="number" id="reserve_rural" value="0" min="0" max="20"></label>
+      <label>Pell reserve (%) <input type="number" id="reserve_pell" value="0" min="0" max="30"></label>
+    </div>
+    <div class="row">
+      <label>Public in-state share (%) <input type="number" id="public_in_state_share" value="70" min="0" max="95"></label>
+    </div>
+    <div class="row">
+      <button id="runBtn">Run Scenario</button>
+    </div>
+  </div>
+</section>
+
+<section id="results" class="results">
+  <div class="card">
+    <h3>Topline</h3>
+    <div id="topline">—</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Group Admit Rates</h3>
+      <table id="groupTable">
+        <thead><tr><th>Group</th><th>Baseline</th><th>Scenario</th><th>Δ (pp)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>College Fill (sample)</h3>
+      <table id="collegeTable">
+        <thead><tr><th>College</th><th>Cap</th><th>Fill%</th><th>In-State%</th><th>First-Gen%</th><th>Pell%</th><th>Rural%</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+async function runScenario() {
+  const payload = {
+    legacy_on_private: document.getElementById("legacy_on_private").checked,
+    test_required_private_elite: document.getElementById("test_required_private_elite").checked,
+    num_private_elites_test_required: parseInt(document.getElementById("num_private_elites_test_required").value || "4", 10),
+    reserve_first_gen: parseFloat(document.getElementById("reserve_first_gen").value || "0")/100.0,
+    reserve_rural: parseFloat(document.getElementById("reserve_rural").value || "0")/100.0,
+    reserve_pell: parseFloat(document.getElementById("reserve_pell").value || "0")/100.0,
+    public_in_state_share: parseFloat(document.getElementById("public_in_state_share").value || "70")/100.0
+  };
+  console.log('Sending payload:', payload);
+  const res = await postJSON("/api/run", payload);
+  console.log('API response:', res);
+  if (!res.ok) { alert("Run failed"); return; }
+  render(res);
+}
+
+function render(res) {
+  console.log('Rendering with data:', res);
+  const base = res.baseline, alt = res.alternative, delta = res.delta;
+  console.log('Base:', base);
+  console.log('Alt:', alt);
+  console.log('Delta:', delta);
+  
+  const tl = document.getElementById("topline");
+  const dr = (k) => (pct(alt.overall[k]) + " (" + sign(delta.overall[k]) + (delta.overall[k]*100).toFixed(1) + "pp vs base)");
+  tl.innerHTML = `
+    <div><strong>Overall admit rate:</strong> ${dr("admit_rate")}</div>
+    <div><strong>In-state share (admits):</strong> ${dr("in_state_share_among_admits")}</div>
+  `;
+
+  // Groups
+  const groups = Object.keys(alt.by_group);
+  const tbody = document.querySelector("#groupTable tbody");
+  tbody.innerHTML = "";
+  groups.forEach(g => {
+    const b = base.by_group[g], a = alt.by_group[g];
+    const d = (a.admit_rate - b.admit_rate)*100;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${g}</td>
+      <td>${pct(b.admit_rate)}</td>
+      <td>${pct(a.admit_rate)}</td>
+      <td class="${d>=0?'pos':'neg'}">${d.toFixed(1)}pp</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Colleges (sample first 12)
+  const ct = document.querySelector("#collegeTable tbody");
+  ct.innerHTML = "";
+  const entries = Object.entries(alt.by_college).slice(0,12);
+  entries.forEach(([cid, row]) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${row.name}</td>
+      <td>${row.capacity}</td>
+      <td>${pct(row.fill_rate)}</td>
+      <td>${pct(row.in_state_share)}</td>
+      <td>${pct(row.first_gen_share)}</td>
+      <td>${pct(row.pell_share)}</td>
+      <td>${pct(row.rural_share)}</td>
+    `;
+    ct.appendChild(tr);
+  });
+}
+
+document.getElementById("runBtn").addEventListener("click", runScenario);
+</script>
+{% endblock %}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug API</title>
+</head>
+<body>
+    <h1>Debug API Response</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function testAPI() {
+            try {
+                const response = await fetch('/api/run', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({})
+                });
+                const data = await response.json();
+                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+                
+                // Check structure
+                console.log('Response structure:', {
+                    hasBaseline: 'baseline' in data,
+                    hasAlternative: 'alternative' in data,
+                    hasDelta: 'delta' in data,
+                    baselineKeys: data.baseline ? Object.keys(data.baseline) : 'N/A',
+                    alternativeKeys: data.alternative ? Object.keys(data.alternative) : 'N/A'
+                });
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

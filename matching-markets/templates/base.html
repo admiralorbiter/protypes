@@ -1,0 +1,34 @@
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Matching Markets Lab — College Edition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  </head>
+  <body>
+    <header>
+      <h1>Matching Markets Lab <span class="muted">College Edition (PoC)</span></h1>
+      <p class="subtitle">Gale–Shapley with priorities, reserves, and policy toggles. See who benefits or loses.</p>
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+    <footer>
+      <small>Prototype — Flask | DA | Reserves | Synthetic Cohorts</small>
+    </footer>
+    <script>
+      async function postJSON(url, data) {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(data || {})
+        });
+        return res.json();
+      }
+      function pct(x, digits=1) { return (x*100).toFixed(digits) + "%"; }
+      function sign(x) { return x >= 0 ? "+" : ""; }
+    </script>
+  </body>
+</html>
