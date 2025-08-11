@@ -1,0 +1,355 @@
+
+{% extends "base.html" %}
+{% block content %}
+<section class="card controls">
+  <h3>📁 Upload History CSV</h3>
+  <form id="uploadForm">
+    <div class="upload-area">
+      <label for="csvFile" class="file-input-label">
+        <span class="file-input-text">Choose CSV file</span>
+        <input type="file" id="csvFile" name="file" accept=".csv" style="display: none;">
+      </label>
+      <button type="submit" class="upload-btn">📤 Upload</button>
+    </div>
+    <div class="hint">
+      <strong>Required columns:</strong> date, event_type, industry, outreach, commitments, shows
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h3>🎯 Build a Plan</h3>
+  <div class="plan-controls">
+    <div class="row">
+      <label>
+        <span class="label-text">Target shows (capacity)</span>
+        <input type="number" id="target" value="30" min="1" placeholder="30">
+      </label>
+      <label>
+        <span class="label-text">Iterations</span>
+        <input type="number" id="iters" value="10000" min="1000" step="1000" placeholder="10000">
+      </label>
+      <label>
+        <span class="label-text">Confidence for Suggestion</span>
+        <input type="number" id="conf" value="0.8" min="0.5" max="0.99" step="0.01" placeholder="0.8">
+      </label>
+    </div>
+  </div>
+  
+  <div class="plan-table-container">
+    <table id="planTable">
+      <thead>
+        <tr>
+          <th>Event Type</th>
+          <th>Industry</th>
+          <th>Reachouts to Send</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  
+  <div class="plan-actions">
+    <button id="addRow" class="secondary">➕ Add Row</button>
+    <button id="simulateBtn">🎲 Simulate</button>
+    <button id="suggestBtn">💡 Suggest Plan</button>
+  </div>
+</section>
+
+<section class="grid results">
+  <div class="card forecast-card">
+    <h3>📊 Forecast</h3>
+    <div id="forecast" class="forecast-content">
+      <div class="empty-state">
+        <span class="empty-icon">📈</span>
+        <p>Run a simulation to see your forecast results</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card segments-card">
+    <h3>📋 Segment Averages (from your data)</h3>
+    <div class="table-container">
+      <table id="segTable">
+        <thead>
+          <tr>
+            <th>Event</th>
+            <th>Industry</th>
+            <th>Resp%</th>
+            <th>Show%</th>
+            <th>Pipeline%</th>
+            <th>Hist Outreach</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<script>
+const EVENTS = {{ event_types|tojson }};
+const INDUSTRIES = {{ industries|tojson }};
+
+// File input handling
+document.getElementById('csvFile').addEventListener('change', function(e) {
+  const fileName = e.target.files[0]?.name || 'Choose CSV file';
+  document.querySelector('.file-input-text').textContent = fileName;
+});
+
+function addRow(eventType=EVENTS[0]||"", industry=INDUSTRIES[0]||"", reachouts=50) {
+  const tbody = document.querySelector("#planTable tbody");
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>
+      <select class="evt">
+        ${EVENTS.map(e=>`<option ${e===eventType?'selected':''}>${e}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <select class="ind">
+        ${INDUSTRIES.map(i=>`<option ${i===industry?'selected':''}>${i}</option>`).join('')}
+      </select>
+    </td>
+    <td>
+      <input class="reach" type="number" value="${reachouts}" min="0" placeholder="50">
+    </td>
+    <td>
+      <button class="del danger" title="Remove row">✕</button>
+    </td>
+  `;
+  tr.querySelector(".del").addEventListener("click", ()=>{ 
+    tr.style.opacity = '0';
+    setTimeout(() => tr.remove(), 200);
+  });
+  tbody.appendChild(tr);
+  
+  // Add animation
+  tr.style.opacity = '0';
+  tr.style.transform = 'translateY(10px)';
+  setTimeout(() => {
+    tr.style.transition = 'all 0.3s ease';
+    tr.style.opacity = '1';
+    tr.style.transform = 'translateY(0)';
+  }, 10);
+}
+
+async function refreshSegments() {
+  try {
+    const d = await getJSON("/api/segments");
+    const tb = document.querySelector("#segTable tbody");
+    tb.innerHTML = "";
+    
+    if (d.segments.length === 0) {
+      tb.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 40px; color: #94a3b8;">
+            No segment data available. Upload a CSV file to get started.
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    d.segments.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${r.event_type}</strong></td>
+        <td>${r.industry}</td>
+        <td><span class="percentage">${(r.mean_resp*100).toFixed(1)}%</span></td>
+        <td><span class="percentage">${(r.mean_show*100).toFixed(1)}%</span></td>
+        <td><span class="percentage">${(r.mean_pipeline*100).toFixed(1)}%</span></td>
+        <td><span class="number">${r.outreach_sum}</span></td>
+      `;
+      tb.appendChild(tr);
+    });
+  } catch (error) {
+    console.error('Error refreshing segments:', error);
+  }
+}
+
+function readPlan() {
+  return [...document.querySelectorAll("#planTable tbody tr")].map(tr => ({
+    event_type: tr.querySelector(".evt").value,
+    industry: tr.querySelector(".ind").value,
+    reachouts: parseInt(tr.querySelector(".reach").value || "0", 10)
+  })).filter(x => x.reachouts > 0);
+}
+
+async function simulate() {
+  const plan = readPlan();
+  if (!plan.length) { 
+    showNotification("Add at least one plan row.", "error");
+    return; 
+  }
+  
+  const target = parseInt(document.getElementById("target").value || "30", 10);
+  const iters = parseInt(document.getElementById("iters").value || "10000", 10);
+  
+  // Show loading state
+  const forecastEl = document.getElementById("forecast");
+  forecastEl.innerHTML = '<div class="loading-spinner">Running simulation...</div>';
+  
+  try {
+    const res = await postJSON("/api/simulate", {plan, target, iters});
+    if (!res.ok) { 
+      showNotification(res.error || "Simulation failed", "error");
+      return; 
+    }
+    
+    const s = res.summary, p = res.prob;
+    forecastEl.innerHTML = `
+      <div class="forecast-results">
+        <div class="forecast-stat">
+          <span class="stat-label">Expected shows:</span>
+          <span class="stat-value">${s.expected.toFixed(1)}</span>
+        </div>
+        <div class="forecast-stat">
+          <span class="stat-label">P10/P50/P90:</span>
+          <span class="stat-value">${s.p10} / ${s.p50} / ${s.p90}</span>
+        </div>
+        <div class="forecast-stat">
+          <span class="stat-label">P(hit target ≥ ${target}):</span>
+          <span class="stat-value ${p.p_hit >= 0.8 ? 'success' : p.p_hit >= 0.6 ? 'warning' : 'danger'}">${(p.p_hit*100).toFixed(1)}%</span>
+        </div>
+        <div class="forecast-stat">
+          <span class="stat-label">P(overfill > ${target}):</span>
+          <span class="stat-value">${(p.p_overfill*100).toFixed(1)}%</span>
+        </div>
+      </div>
+    `;
+  } catch (error) {
+    forecastEl.innerHTML = '<div class="error-message">Simulation failed. Please try again.</div>';
+    console.error('Simulation error:', error);
+  }
+}
+
+async function suggest() {
+  const plan = readPlan();
+  if (!plan.length) { 
+    showNotification("Add at least one plan row.", "error");
+    return; 
+  }
+  
+  const target = parseInt(document.getElementById("target").value || "30", 10);
+  const conf = parseFloat(document.getElementById("conf").value || "0.8");
+  
+  // Show loading state
+  const forecastEl = document.getElementById("forecast");
+  forecastEl.innerHTML = '<div class="loading-spinner">Generating suggestion...</div>';
+  
+  try {
+    const res = await postJSON("/api/suggest", {plan, target, conf});
+    if (!res.ok) { 
+      showNotification(res.error || "Suggestion failed", "error");
+      return; 
+    }
+    
+    const s = res.suggestion;
+    let html = `
+      <div class="forecast-results">
+        <div class="forecast-stat">
+          <span class="stat-label">Suggested scale:</span>
+          <span class="stat-value">×${s.scale.toFixed(2)} on each row</span>
+        </div>
+        <div class="forecast-stat">
+          <span class="stat-label">Validation:</span>
+          <span class="stat-value">expected ${s.validation.expected.toFixed(1)}</span>
+        </div>
+        <div class="forecast-stat">
+          <span class="stat-label">P10/P50/P90:</span>
+          <span class="stat-value">${s.validation.p10} / ${s.validation.p50} / ${s.validation.p90}</span>
+        </div>
+        <div class="forecast-stat">
+          <span class="stat-label">P(hit):</span>
+          <span class="stat-value ${s.validation.p_hit >= 0.8 ? 'success' : s.validation.p_hit >= 0.6 ? 'warning' : 'danger'}">${(s.validation.p_hit*100).toFixed(1)}%</span>
+        </div>
+      </div>
+      <div class="suggested-plan">
+        <h4>Suggested Plan</h4>
+        <table class="suggestion-table">
+          <thead>
+            <tr><th>Event</th><th>Industry</th><th>Reachouts</th></tr>
+          </thead>
+          <tbody>
+            ${s.plan.map(row => `
+              <tr>
+                <td>${row.event_type}</td>
+                <td>${row.industry}</td>
+                <td><strong>${row.reachouts}</strong></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+    forecastEl.innerHTML = html;
+  } catch (error) {
+    forecastEl.innerHTML = '<div class="error-message">Suggestion failed. Please try again.</div>';
+    console.error('Suggestion error:', error);
+  }
+}
+
+function showNotification(message, type = 'info') {
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification ${type}`;
+  notification.textContent = message;
+  
+  // Add to page
+  document.body.appendChild(notification);
+  
+  // Show notification
+  setTimeout(() => notification.classList.add('show'), 10);
+  
+  // Remove after 5 seconds
+  setTimeout(() => {
+    notification.classList.remove('show');
+    setTimeout(() => notification.remove(), 300);
+  }, 5000);
+}
+
+// Event listeners
+document.getElementById("addRow").addEventListener("click", ()=> addRow());
+document.getElementById("simulateBtn").addEventListener("click", simulate);
+document.getElementById("suggestBtn").addEventListener("click", suggest);
+
+document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  
+  // Show loading state
+  const uploadBtn = e.target.querySelector('button[type="submit"]');
+  const originalText = uploadBtn.textContent;
+  uploadBtn.textContent = 'Uploading...';
+  uploadBtn.disabled = true;
+  
+  try {
+    const res = await postJSON("/api/upload", fd);
+    if (!res.ok) { 
+      showNotification(res.error || "Upload failed", "error");
+      return; 
+    }
+    
+    await refreshSegments();
+    showNotification("Upload successful! Segment stats updated.", "success");
+    
+    // Reset file input
+    document.getElementById('csvFile').value = '';
+    document.querySelector('.file-input-text').textContent = 'Choose CSV file';
+  } catch (error) {
+    showNotification("Upload failed. Please try again.", "error");
+    console.error('Upload error:', error);
+  } finally {
+    uploadBtn.textContent = originalText;
+    uploadBtn.disabled = false;
+  }
+});
+
+// Initialize with two rows and load segments
+addRow();
+addRow();
+refreshSegments();
+</script>
+{% endblock %}

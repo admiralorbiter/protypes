@@ -1,0 +1,81 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Volunteer Waitlist & Yield Forecaster - Plan your outreach strategy with data-driven insights">
+    <meta name="theme-color" content="#0f172a">
+    <title>Volunteer Waitlist & Yield Forecaster</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  </head>
+  <body>
+    <header>
+      <h1>Volunteer Waitlist & Yield Forecaster</h1>
+      <p class="subtitle">How many people should we reach out to today to hit event capacity?</p>
+    </header>
+    <main>
+      {% block content %}{% endblock %}
+    </main>
+    <footer>
+      <small>Beta-Binomial posteriors from your historical data; Monte Carlo forecast. Bring your own CSV or use the sample.</small>
+    </footer>
+    <script>
+      // Utility functions
+      async function postJSON(url, data) {
+        try {
+          const res = await fetch(url, { 
+            method: "POST", 
+            body: data instanceof FormData ? data : JSON.stringify(data),
+            headers: data instanceof FormData ? {} : {"Content-Type":"application/json"} 
+          });
+          return res.json();
+        } catch (error) {
+          console.error('POST request failed:', error);
+          return { ok: false, error: 'Network error' };
+        }
+      }
+      
+      async function getJSON(url) { 
+        try {
+          const r = await fetch(url); 
+          return r.json(); 
+        } catch (error) {
+          console.error('GET request failed:', error);
+          return { ok: false, error: 'Network error' };
+        }
+      }
+      
+      function pct(x, d=1) { 
+        return (x*100).toFixed(d) + "%"; 
+      }
+      
+      // Add smooth scrolling
+      document.addEventListener('DOMContentLoaded', function() {
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+          anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+              target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+              });
+            }
+          });
+        });
+        
+        // Add loading states to buttons
+        document.querySelectorAll('button[type="submit"]').forEach(button => {
+          button.addEventListener('click', function() {
+            if (!this.disabled) {
+              this.classList.add('loading');
+            }
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
