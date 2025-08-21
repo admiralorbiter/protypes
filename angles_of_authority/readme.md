@@ -164,52 +164,20 @@
 
 ---
 
-## 9) Implementation Checklists (Task Breakdown)
+## 9) Implementation & Development
 
-### 9.1 Project & Infrastructure
-- [ ] Create repo, virtualenv, requirements (`pygame>=2.5`).
-- [ ] Main loop with `dt`, pause toggling, scene stack (Game, AAR).
-- [ ] Input mapper (bind actions & UI hotkeys).
+**For detailed implementation planning and task breakdown, see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)**
 
-### 9.2 Map & Navigation
-- [ ] Load CSV tilemap; mark wall/door/cover tiles.
-- [ ] A* or simple greedy-steer to clicked tile with collision.
-- [ ] Door object with states (closed, open, kicked).
+The development is organized into 7 phases:
+- **Phase 0-1**: Core infrastructure and basic movement
+- **Phase 2**: Vision and witness system  
+- **Phase 3**: Actions and Rules of Engagement
+- **Phase 4**: AI and mission logic
+- **Phase 5**: After-Action Review system
+- **Phase 6**: Audio, effects, and polish
+- **Phase 7**: Testing and final integration
 
-### 9.3 Entities & Components
-- [ ] `Transform`, `Hitbox`, `Team`, `FOV`, `AIState`, `Inventory`, `Camera` (for bodycams), `RoleTag`.
-- [ ] Spawner for operators, suspects, civilians, press.
-
-### 9.4 Vision & Witnessing
-- [ ] Cone raycast per viewer each tick with cached occluders.
-- [ ] Event visibility query `visible_viewers(event_pos)` → ids & weights.
-
-### 9.5 Actions & ROE
-- [ ] Implement actions: Move, Aim, Shout, Fire (hitscan), KickDoor, Flashbang, Cuff, SecureEvidence.
-- [ ] ROE slider UI; config in `roe.json`.
-- [ ] ROE gate: pre-checks per action; deny with reason overlay.
-
-### 9.6 AI Behavior (Slice)
-- [ ] Suspect: idle → investigate noise → draw weapon → aim/shoot/flee logic.
-- [ ] Civilian: wander → freeze → flee to safe tile if shots nearby.
-- [ ] Press: wander route; avoids gunfire but keeps line-of-sight.
-
-### 9.7 Event Logging & AAR
-- [ ] `LoggerSystem.append(row)` on significant actions.
-- [ ] Keyframe selection (top-|score| deltas or notable states).
-- [ ] AAR scene: timeline scrubber, per-viewer overlays, final Legitimacy calc.
-
-### 9.8 UI & Feedback
-- [ ] ROE slider (R to cycle), Legitimacy meter (0–100), action bar, minimap.
-- [ ] Tooltips for blocked actions with cause (e.g., “Strict ROE blocks Fire”).
-
-### 9.9 Audio & Polish (Minimal)
-- [ ] Footstep, shout, door kick, flashbang pop, single gunshot SFX (placeholders).
-- [ ] Screen shake on breach, brief white flash for flashbang (alpha overlay).
-
-### 9.10 Packaging
-- [ ] Config file for tuning constants.
-- [ ] One-click run script; README with controls.
+Each phase builds upon the previous one, with clear deliverables and acceptance criteria.
 
 ---
 
@@ -231,11 +199,17 @@
 
 ---
 
-## 12) Milestones (2–3 Evenings)
+## 12) Development Timeline
 
-**Day 1:** Map+movement, ROE slider, Move/Shout/Fire, basic FOV, Logger skeleton.  
-**Day 2:** Witness checks, AAR replayer & scoring, flashbang/door-kick/cuff/evidence, Legitimacy meter.  
-**Day 3 (polish):** AI states, keyframe selection, sound/FX, acceptance tests pass.
+**Target:** 2-3 weeks (evenings/weekends)  
+**Approach:** 7 development phases with clear deliverables
+
+**For detailed phase-by-phase breakdown, see [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md)**
+
+**Quick Overview:**
+- **Week 1**: Core systems, movement, vision (Phases 0-2)
+- **Week 2**: Actions, AI, mission logic (Phases 3-4)  
+- **Week 3**: AAR, polish, testing (Phases 5-7)
 
 ---
 
