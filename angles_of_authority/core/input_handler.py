@@ -30,12 +30,7 @@ class InputHandler:
     
     def _setup_default_bindings(self):
         """Setup default key bindings"""
-        # Movement
-        self.bind_key(pygame.K_w, "move_up")
-        self.bind_key(pygame.K_s, "move_down")
-        self.bind_key(pygame.K_a, "move_left")
-        self.bind_key(pygame.K_d, "move_right")
-        
+        # Note: WASD movement is handled by PlayerController in scenes
         # Operator selection
         self.bind_key(pygame.K_1, "select_operator_1")
         self.bind_key(pygame.K_2, "select_operator_2")

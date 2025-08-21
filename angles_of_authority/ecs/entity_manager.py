@@ -25,9 +25,8 @@ class EntityManager:
         self.entities[self.next_entity_id] = entity
         self.next_entity_id += 1
         
-        # Register with all systems
-        for system in self.systems:
-            system.register_entity(entity)
+        # Note: Entity will be registered with systems when components are added
+        # This allows systems to properly check component requirements
         
         return entity
     
@@ -107,6 +106,11 @@ class EntityManager:
             # Update tag collections
             if tag in self.entity_tags:
                 self.entity_tags[tag].discard(entity_id)
+    
+    def re_register_entity_with_systems(self, entity: Entity):
+        """Re-register an entity with all systems after components have been added"""
+        for system in self.systems:
+            system.register_entity(entity)
     
     def clear(self):
         """Clear all entities and systems"""

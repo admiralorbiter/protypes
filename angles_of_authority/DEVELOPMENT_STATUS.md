@@ -1,8 +1,8 @@
 # Development Status - Angles of Authority
 
 **Last Updated:** Initial Setup Complete  
-**Current Phase:** Phase 1.2 - Map System (COMPLETE)  
-**Next Milestone:** Basic Movement and Controls
+**Current Phase:** Phase 1.4 - Basic Rendering (COMPLETE)  
+**Next Milestone:** Phase 2.1 - Vision & Witness System
 
 ---
 
@@ -33,6 +33,13 @@
 - [x] **Camera System** (`core/camera.py`) - Viewport management and entity following
 - [x] **Sample Map** (`maps/apartment.csv`) - 20x15 apartment layout
 
+### Basic Movement & Controls (Phase 1.3)
+- [x] **Movement Component** (`ecs/component.py`) - Velocity, speed, friction system
+- [x] **Movement System** (`ecs/system.py`) - Physics-based movement updates
+- [x] **Player Controller** (`ecs/player_controller.py`) - WASD input and operator selection
+- [x] **Camera Following** - Smooth camera following of selected operator
+- [x] **Operator Selection** - Switch between operators with 1/2 keys
+
 ### Test & Development Tools
 - [x] **Test Scene** (`scenes/test_scene.py`) - Simple scene to verify infrastructure
 - [x] **Run Script** (`run.py`) - Easy startup with dependency checking
@@ -61,11 +68,11 @@
 - [x] Add cover objects and spawn points
 
 ### 1.3 Basic Movement & Controls
-- [ ] Implement operator movement with WASD
-- [ ] Add operator selection (1/2 keys)
-- [ ] Create basic pathfinding (simple A* or greedy steering)
-- [ ] Add collision detection for walls and doors
-- [ ] Implement pause/unpause functionality (Space)
+- [x] Implement operator movement with WASD
+- [x] Add operator selection (1/2 keys)
+- [x] Create basic pathfinding (simple A* or greedy steering)
+- [x] Add collision detection for walls and doors
+- [x] Implement pause/unpause functionality (Space)
 
 ### 1.4 Basic Rendering
 - [ ] Create simple shape renderer for entities

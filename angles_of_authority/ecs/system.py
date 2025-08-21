@@ -3,10 +3,11 @@ System base classes for the Entity Component System
 Systems process entities with specific component combinations
 """
 
+import pygame
 from abc import ABC, abstractmethod
 from typing import List, Type, TypeVar, Dict, Set
 from .entity import Entity
-from .component import Component, Transform, Hitbox, AIState
+from .component import Component, Transform, Hitbox, AIState, Movement, Team
 
 T = TypeVar('T', bound=Component)
 
@@ -78,23 +79,104 @@ class MovementSystem(ComponentSystem):
     """System for handling entity movement"""
     
     def __init__(self):
-        super().__init__([Transform, Hitbox])
+        super().__init__([Transform, Movement])
     
     def _process_entity(self, entity: Entity, dt: float):
         """Process movement for a single entity"""
-        # This will be implemented when we add movement components
-        pass
+        transform = entity.get_component(Transform)
+        movement = entity.get_component(Movement)
+        
+        if not transform or not movement:
+            return
+        
+        # Apply velocity to position
+        transform.x += movement.velocity_x * dt
+        transform.y += movement.velocity_y * dt
+        
+        # Apply friction
+        movement.apply_friction(dt)
 
 class RenderSystem(ComponentSystem):
     """System for rendering entities"""
     
-    def __init__(self):
+    def __init__(self, screen=None, camera=None, player_controller=None):
         super().__init__([Transform])
+        self.screen = screen
+        self.camera = camera
+        self.player_controller = player_controller
+    
+    def set_screen_and_camera(self, screen, camera, player_controller=None):
+        """Set the screen and camera for rendering"""
+        self.screen = screen
+        self.camera = camera
+        if player_controller:
+            self.player_controller = player_controller
     
     def _process_entity(self, entity: Entity, dt: float):
         """Process rendering for a single entity"""
-        # This will be implemented when we add rendering
-        pass
+        if not self.screen or not self.camera:
+            return
+            
+        transform = entity.get_component(Transform)
+        
+        if not transform:
+            return
+        
+        # Convert world coordinates to screen coordinates
+        screen_x, screen_y = self.camera.world_to_screen(transform.x, transform.y)
+        
+        # Only render if visible on screen
+        if not self.camera.is_visible(transform.x, transform.y, 32, 32):
+            return
+        
+        # Get entity color based on team/type
+        color = self._get_entity_color(entity)
+        
+        # Draw entity as a circle (32px diameter)
+        radius = 20  # Larger radius for better visibility
+        pygame.draw.circle(self.screen, color, (int(screen_x), int(screen_y)), radius)
+        
+        # Draw border
+        border_color = (255, 255, 255) if self._is_selected(entity) else (0, 0, 0)
+        border_width = 3 if self._is_selected(entity) else 1
+        pygame.draw.circle(self.screen, border_color, (int(screen_x), int(screen_y)), radius, border_width)
+        
+        # Draw name above entity
+        if hasattr(entity, 'name') and entity.name:
+            font = pygame.font.Font(None, 18)
+            text = font.render(entity.name, True, (255, 255, 255))
+            text_rect = text.get_rect(center=(screen_x, screen_y - 30))
+            self.screen.blit(text, text_rect)
+    
+    def _get_entity_color(self, entity):
+        """Get color based on entity type"""
+        team = entity.get_component(Team)
+        
+        if team:
+            if team.team == Team.OPERATOR:
+                return (0, 100, 255)  # Blue
+            elif team.team == Team.SUSPECT:
+                return (255, 50, 50)  # Red
+            elif team.team == Team.CIVILIAN:
+                return (100, 255, 100)  # Green
+            elif team.team == Team.PRESS:
+                return (255, 255, 100)  # Yellow
+        
+        # Default colors based on tags
+        if entity.has_tag("cover"):
+            return (139, 69, 19)  # Brown
+        elif entity.has_tag("door"):
+            return (160, 82, 45)  # Saddle brown
+        elif entity.has_tag("evidence"):
+            return (255, 0, 255)  # Magenta
+        else:
+            return (128, 128, 128)  # Gray
+    
+    def _is_selected(self, entity):
+        """Check if entity is currently selected"""
+        if self.player_controller:
+            return entity == self.player_controller.get_selected_operator()
+        return False
 
 class CollisionSystem(ComponentSystem):
     """System for handling collisions between entities"""

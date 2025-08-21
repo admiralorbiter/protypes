@@ -245,3 +245,44 @@ class Camera(Component):
     def get_recorded_events(self) -> list:
         """Get all recorded events"""
         return self.recorded_events.copy()
+
+class Movement(Component):
+    """Movement capabilities for entities"""
+    
+    def __init__(self, speed: float = 100.0, max_speed: float = 150.0):
+        super().__init__()
+        self.speed = speed  # Pixels per second
+        self.max_speed = max_speed
+        self.velocity_x = 0.0
+        self.velocity_y = 0.0
+        self.acceleration = 400.0  # Pixels per second squared
+        self.friction = 0.8  # Velocity multiplier per frame
+    
+    def set_velocity(self, x: float, y: float):
+        """Set velocity directly"""
+        self.velocity_x = max(-self.max_speed, min(self.max_speed, x))
+        self.velocity_y = max(-self.max_speed, min(self.max_speed, y))
+    
+    def add_velocity(self, dx: float, dy: float):
+        """Add to current velocity"""
+        self.velocity_x = max(-self.max_speed, min(self.max_speed, self.velocity_x + dx))
+        self.velocity_y = max(-self.max_speed, min(self.max_speed, self.velocity_y + dy))
+    
+    def apply_friction(self, dt: float):
+        """Apply friction to slow down movement"""
+        self.velocity_x *= self.friction ** dt
+        self.velocity_y *= self.friction ** dt
+        
+        # Stop very small velocities
+        if abs(self.velocity_x) < 1.0:
+            self.velocity_x = 0.0
+        if abs(self.velocity_y) < 1.0:
+            self.velocity_y = 0.0
+    
+    def get_velocity(self) -> tuple[float, float]:
+        """Get current velocity as (x, y) tuple"""
+        return (self.velocity_x, self.velocity_y)
+    
+    def is_moving(self) -> bool:
+        """Check if entity is currently moving"""
+        return abs(self.velocity_x) > 1.0 or abs(self.velocity_y) > 1.0

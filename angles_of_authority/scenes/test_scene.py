@@ -8,6 +8,7 @@ from core.scene import Scene
 from ecs.entity_manager import EntityManager
 from ecs.entity_factory import EntityFactory
 from ecs.system import MovementSystem, RenderSystem, CollisionSystem, AISystem
+from ecs.player_controller import PlayerController
 from maps.tilemap import Tilemap
 from maps.map_renderer import MapRenderer
 from maps.map_builder import MapBuilder
@@ -29,9 +30,13 @@ class TestScene(Scene):
         
         # Add systems
         self.entity_manager.add_system(MovementSystem())
-        self.entity_manager.add_system(RenderSystem())
+        self.render_system = RenderSystem()
+        self.entity_manager.add_system(self.render_system)
         self.entity_manager.add_system(CollisionSystem())
         self.entity_manager.add_system(AISystem())
+        
+        # Player controller
+        self.player_controller = PlayerController()
         
         # Map system
         self.map_builder = MapBuilder()
@@ -57,8 +62,12 @@ class TestScene(Scene):
         # Update ECS systems
         self.entity_manager.update_systems(dt)
         
+        # Update player controller
+        self.player_controller.update(dt)
+        
         # Update camera
-        self.camera.update(dt)
+        if self.camera:
+            self.camera.update(dt)
     
     def render(self, screen: pygame.Surface):
         """Render test scene"""
@@ -66,12 +75,20 @@ class TestScene(Scene):
         screen.fill((20, 40, 80))
         
         # Render map
-        camera_offset = (self.camera.x, self.camera.y)
-        self.map_renderer.render(screen, camera_offset)
-        
-        # Render minimap
-        minimap_rect = pygame.Rect(10, 10, 150, 100)
-        self.map_renderer.render_minimap(screen, minimap_rect)
+        if self.map_renderer and self.camera:
+            camera_offset = (self.camera.x, self.camera.y)
+            self.map_renderer.render(screen, camera_offset)
+            
+            # Set up render system with screen and camera
+            self.render_system.set_screen_and_camera(screen, self.camera, self.player_controller)
+            
+            # Render entities AFTER the map
+            for entity in self.entity_manager.get_all_entities():
+                self.render_system._process_entity(entity, 0.0)
+            
+            # Render minimap
+            minimap_rect = pygame.Rect(10, 10, 150, 100)
+            self.map_renderer.render_minimap(screen, minimap_rect)
         
         if self.font:
             # Render test text
@@ -82,10 +99,11 @@ class TestScene(Scene):
             # Render instructions
             instructions = [
                 "Controls:",
-                "WASD - Move",
-                "1 - ECS Debug Info",
+                "WASD - Move Operator",
+                "1/2 - Select Operator",
                 "2 - Simple Apartment",
                 "3 - Complex Apartment", 
+                "4 - Player Controller Info",
                 "V - Shout",
                 "F - Flashbang",
                 "K - Kick Door",
@@ -100,9 +118,17 @@ class TestScene(Scene):
             ecs_info = [
                 f"ECS: {self.entity_manager.get_entity_count()} entities, {self.entity_manager.get_system_count()} systems",
                 "Entities created: Operator, Suspect, Civilian, Press, Cover, Door, Evidence, Wall",
-                f"Map: {self.tilemap.width}x{self.tilemap.height} tiles",
-                f"Camera: ({self.camera.x:.0f}, {self.camera.y:.0f})"
+                f"Map: {self.tilemap.width if self.tilemap else 'None'}x{self.tilemap.height if self.tilemap else 'None'} tiles",
+                f"Camera: ({self.camera.x:.0f}, {self.camera.y:.0f})" if self.camera else "Camera: None",
+                f"Player Controller: {self.player_controller.get_operator_count()} operators"
             ]
+            
+            # Add selected operator position info
+            selected_op = self.player_controller.get_selected_operator()
+            if selected_op:
+                transform = selected_op.get_component('Transform')
+                if transform:
+                    ecs_info.append(f"Selected Operator: {selected_op.name} at ({transform.x:.0f}, {transform.y:.0f})")
             
             # Add ECS info to instructions
             instructions.extend([""] + ecs_info)
@@ -117,21 +143,29 @@ class TestScene(Scene):
     def handle_event(self, event):
         """Handle events in test scene"""
         if event.type == pygame.KEYDOWN:
+            # Handle player controller input
+            self.player_controller.handle_keydown(event.key)
+            
+            # Handle other game events
             if event.key == pygame.K_r:
                 print("ROE toggle pressed!")
             elif event.key == pygame.K_v:
                 print("Shout action!")
             elif event.key == pygame.K_f:
                 print("Flashbang action!")
-            elif event.key == pygame.K_1:
-                print("ECS Debug Info:")
-                print(self.entity_manager.debug_info())
             elif event.key == pygame.K_2:
                 print("Generating simple apartment...")
                 self._load_simple_apartment()
             elif event.key == pygame.K_3:
                 print("Generating complex apartment...")
                 self._load_complex_apartment()
+            elif event.key == pygame.K_4:
+                print("Player Controller Info:")
+                print(self.player_controller.get_operator_info())
+        
+        elif event.type == pygame.KEYUP:
+            # Handle key release for movement
+            self.player_controller.handle_keyup(event.key)
     
     def _load_map(self):
         """Create and load the apartment map using MapBuilder"""
@@ -144,6 +178,9 @@ class TestScene(Scene):
         self.map_renderer = MapRenderer(self.tilemap)
         self.camera = Camera(1280, 720, 25 * 32, 20 * 32)
         
+        # Set up camera to follow selected operator
+        self._setup_camera_following()
+        
         print("Map created successfully!")
         print(self.tilemap.debug_info())
         
@@ -155,6 +192,7 @@ class TestScene(Scene):
         self.tilemap = self.map_builder.create_simple_apartment(20, 15)
         self.map_renderer = MapRenderer(self.tilemap)
         self.camera = Camera(1280, 720, 20 * 32, 15 * 32)
+        self._setup_camera_following()
         print("Simple apartment loaded!")
         print(self.tilemap.debug_info())
     
@@ -163,13 +201,25 @@ class TestScene(Scene):
         self.tilemap = self.map_builder.create_complex_apartment(25, 20)
         self.map_renderer = MapRenderer(self.tilemap)
         self.camera = Camera(1280, 720, 25 * 32, 20 * 32)
+        self._setup_camera_following()
         print("Complex apartment loaded!")
         print(self.tilemap.debug_info())
     
+    def _setup_camera_following(self):
+        """Set up camera to follow the selected operator"""
+        if self.player_controller.selected_operator and self.camera:
+            self.camera.follow_entity(self.player_controller.selected_operator)
+            print(f"Camera following: {self.player_controller.selected_operator.name}")
+    
     def _create_test_entities(self):
         """Create test entities to verify ECS system"""
-        # Create an operator
-        operator = self.entity_factory.create_operator(100, 100, "Operator 1")
+        # Create operators (player controlled) - position them in the center of the map
+        operator1 = self.entity_factory.create_operator(320, 240, "Operator 1")  # Center of 20x15 map
+        operator2 = self.entity_factory.create_operator(380, 240, "Operator 2")  # Nearby
+        
+        # Register operators with player controller
+        self.player_controller.register_operator(operator1)
+        self.player_controller.register_operator(operator2)
         
         # Create a suspect
         suspect = self.entity_factory.create_suspect(200, 150, "Suspect 1")
@@ -192,6 +242,10 @@ class TestScene(Scene):
         
         # Create a wall
         wall = self.entity_factory.create_wall(500, 300, 128, 32, "Wall 1")
+        
+        # Re-register all entities with systems after components are added
+        for entity in self.entity_manager.get_all_entities():
+            self.entity_manager.re_register_entity_with_systems(entity)
         
         print(f"Created {self.entity_manager.get_entity_count()} test entities")
         print("ECS System initialized successfully!")

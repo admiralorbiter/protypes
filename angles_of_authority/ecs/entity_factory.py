@@ -5,7 +5,7 @@ Provides easy methods to create operators, suspects, civilians, etc.
 
 from .entity_manager import EntityManager
 from .entity import Entity
-from .component import Transform, Hitbox, Team, FOV, AIState, Inventory, Camera
+from .component import Transform, Hitbox, Team, FOV, AIState, Inventory, Camera, Movement
 
 class EntityFactory:
     """Factory for creating common entity types"""
@@ -24,6 +24,7 @@ class EntityFactory:
         entity.add_component(FOV(70.0, 220.0))  # 70° FOV, 220px range
         entity.add_component(Inventory())
         entity.add_component(Camera(is_recording=True))
+        entity.add_component(Movement(speed=120.0, max_speed=180.0))  # Fast movement for operators
         
         # Add tags
         entity.add_tag("player_controlled")
