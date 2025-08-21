@@ -55,11 +55,13 @@ class PlayerController:
     def update(self, dt: float):
         """Update player controller (called each frame)"""
         if not self.selected_operator:
+            print("No selected operator")
             return
         
         # Get movement component
         movement = self.selected_operator.get_component(Movement)
         if not movement:
+            print("Selected operator has no Movement component")
             return
         
         # Calculate movement direction

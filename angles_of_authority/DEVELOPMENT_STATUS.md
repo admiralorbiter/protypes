@@ -1,7 +1,7 @@
 # Development Status - Angles of Authority
 
-**Last Updated:** Initial Setup Complete  
-**Current Phase:** Phase 1.4 - Basic Rendering (COMPLETE)  
+**Last Updated:** December 2024  
+**Current Phase:** Phase 1.5 - Entity Collision & Interaction (COMPLETE ✅)  
 **Next Milestone:** Phase 2.1 - Vision & Witness System
 
 ---
@@ -49,7 +49,10 @@
 
 ## 🚧 In Progress
 
-### Nothing currently - Phase 0 complete!
+### Phase 1.5 - Entity Collision & Interaction (COMPLETE ✅)
+- [x] **Entity-to-Entity Collision** - Prevent walking through other entities
+- [x] **Interaction System** - Basic interaction between entities
+- [x] **Team-based Collision** - Different collision rules for different teams
 
 ---
 
@@ -74,11 +77,14 @@
 - [x] Add collision detection for walls and doors
 - [x] Implement pause/unpause functionality (Space)
 
-### 1.4 Basic Rendering
-- [ ] Create simple shape renderer for entities
-- [ ] Implement basic camera system
-- [ ] Add minimap rendering
-- [ ] Create simple UI framework
+### 1.4 Basic Rendering (COMPLETE ✅)
+- [x] Create simple shape renderer for entities
+- [x] Implement basic camera system
+- [x] Add minimap rendering
+- [x] Create simple UI framework
+- [x] **Unified coordinate system** - Map and entities use same rendering pipeline
+- [x] **Proper entity positioning** - Entities spawn on walkable tiles
+- [x] **Wall collision detection** - Operators can't walk through walls
 
 ---
 

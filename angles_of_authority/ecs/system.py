@@ -78,23 +78,139 @@ class ComponentSystem(System):
 class MovementSystem(ComponentSystem):
     """System for handling entity movement"""
     
-    def __init__(self):
+    def __init__(self, tilemap=None, entity_manager=None):
         super().__init__([Transform, Movement])
+        self.tilemap = tilemap
+        self.entity_manager = entity_manager
+    
+    def set_tilemap(self, tilemap):
+        """Set the tilemap for collision detection"""
+        self.tilemap = tilemap
+    
+    def set_entity_manager(self, entity_manager):
+        """Set the entity manager for entity-to-entity collision detection"""
+        self.entity_manager = entity_manager
     
     def _process_entity(self, entity: Entity, dt: float):
         """Process movement for a single entity"""
         transform = entity.get_component(Transform)
         movement = entity.get_component(Movement)
+        hitbox = entity.get_component(Hitbox)
         
         if not transform or not movement:
             return
         
-        # Apply velocity to position
-        transform.x += movement.velocity_x * dt
-        transform.y += movement.velocity_y * dt
+
+        
+        # Calculate new position
+        new_x = transform.x + movement.velocity_x * dt
+        new_y = transform.y + movement.velocity_y * dt
+        
+        # Check collision with tilemap if available
+        if self.tilemap and hitbox:
+            # Check X movement
+            can_move_x = self._can_move_to(new_x, transform.y, hitbox)
+            if can_move_x:
+                transform.x = new_x
+            else:
+                movement.velocity_x = 0  # Stop X movement on collision
+            
+            # Check Y movement  
+            can_move_y = self._can_move_to(transform.x, new_y, hitbox)
+            if can_move_y:
+                transform.y = new_y
+            else:
+                movement.velocity_y = 0  # Stop Y movement on collision
+        else:
+            # No collision detection - apply movement directly
+            transform.x = new_x
+            transform.y = new_y
         
         # Apply friction
         movement.apply_friction(dt)
+    
+    def _can_move_to(self, x: float, y: float, hitbox: Hitbox) -> bool:
+        """Check if an entity can move to the given position"""
+        # Check tilemap collision first
+        if self.tilemap:
+            # Get hitbox bounds
+            half_width = hitbox.width / 2
+            half_height = hitbox.height / 2
+            
+            # Check all four corners of the hitbox
+            corners = [
+                (x - half_width, y - half_height),  # Top-left
+                (x + half_width, y - half_height),  # Top-right
+                (x - half_width, y + half_height),  # Bottom-left
+                (x + half_width, y + half_height),  # Bottom-right
+            ]
+            
+            for corner_x, corner_y in corners:
+                # Convert world coordinates to tile coordinates using the tilemap's method
+                tile_x, tile_y = self.tilemap.world_to_tile(corner_x, corner_y)
+                
+                # Check if the tile at this position is walkable
+                if not self.tilemap.is_walkable(tile_x, tile_y):
+                    return False
+        
+        # Check entity-to-entity collision
+        if self.entity_manager:
+            # Get hitbox bounds for the moving entity
+            half_width = hitbox.width / 2
+            half_height = hitbox.height / 2
+            
+            # Check collision with all other entities
+            for other_entity in self.entity_manager.get_all_entities():
+                if other_entity.entity_id == hitbox.entity_id:  # Skip self
+                    continue
+                
+                # Skip collision with static objects (walls, doors) - they use tilemap collision
+                if other_entity.has_tag("static"):
+                    continue
+                    
+                other_transform = other_entity.get_component(Transform)
+                other_hitbox = other_entity.get_component(Hitbox)
+                
+                if not other_transform or not other_hitbox:
+                    continue
+                
+                # Check if hitboxes overlap
+                other_half_width = other_hitbox.width / 2
+                other_half_height = other_hitbox.height / 2
+                
+                if self._hitboxes_overlap(
+                    x, y, half_width, half_height,
+                    other_transform.x, other_transform.y, 
+                    other_half_width, other_half_height
+                ):
+                    # Debug output
+                    distance_x = abs(x - other_transform.x)
+                    distance_y = abs(y - other_transform.y)
+                    threshold_x = (half_width + other_half_width) - 2.0
+                    threshold_y = (half_height + other_half_height) - 2.0
+                    print(f"COLLISION: Moving to ({x:.1f}, {y:.1f}) blocked by entity at ({other_transform.x:.1f}, {other_transform.y:.1f})")
+                    print(f"  Distance: X={distance_x:.1f}, Y={distance_y:.1f}")
+                    print(f"  Threshold: X={threshold_x:.1f}, Y={threshold_y:.1f}")
+                    print(f"  Hitbox sizes: Moving={half_width*2:.1f}x{half_height*2:.1f}, Other={other_half_width*2:.1f}x{other_half_height*2:.1f}")
+                    return False
+        
+        return True
+    
+    def _hitboxes_overlap(self, x1: float, y1: float, w1: float, h1: float,
+                          x2: float, y2: float, w2: float, h2: float) -> bool:
+        """Check if two hitboxes overlap"""
+        # w1, h1, w2, h2 are half-widths and half-heights (radii)
+        # Two circles overlap if distance between centers < sum of radii
+        distance_x = abs(x1 - x2)
+        distance_y = abs(y1 - y2)
+        
+        # Use a slightly smaller collision radius to allow entities to get closer
+        collision_buffer = 2.0  # Allow entities to get within 2 pixels
+        overlap_threshold_x = (w1 + w2) - collision_buffer
+        overlap_threshold_y = (h1 + h2) - collision_buffer
+        
+        return (distance_x < overlap_threshold_x and 
+                distance_y < overlap_threshold_y)
 
 class RenderSystem(ComponentSystem):
     """System for rendering entities"""
