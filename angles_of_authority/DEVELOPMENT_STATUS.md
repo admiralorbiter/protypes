@@ -1,8 +1,8 @@
 # Development Status - Angles of Authority
 
 **Last Updated:** Initial Setup Complete  
-**Current Phase:** Phase 1.1 - Entity Component System Foundation (COMPLETE)  
-**Next Milestone:** Map System and Basic Movement
+**Current Phase:** Phase 1.2 - Map System (COMPLETE)  
+**Next Milestone:** Basic Movement and Controls
 
 ---
 
@@ -27,6 +27,12 @@
 - [x] **Entity Manager** (`ecs/entity_manager.py`) - Central coordination of all entities and systems
 - [x] **Entity Factory** (`ecs/entity_factory.py`) - Easy creation of common entity types
 
+### Map System (Phase 1.2)
+- [x] **Tilemap System** (`maps/tilemap.py`) - CSV loading, tile types, collision detection
+- [x] **Map Renderer** (`maps/map_renderer.py`) - Visual rendering with colors and indicators
+- [x] **Camera System** (`core/camera.py`) - Viewport management and entity following
+- [x] **Sample Map** (`maps/apartment.csv`) - 20x15 apartment layout
+
 ### Test & Development Tools
 - [x] **Test Scene** (`scenes/test_scene.py`) - Simple scene to verify infrastructure
 - [x] **Run Script** (`run.py`) - Easy startup with dependency checking
@@ -49,10 +55,10 @@
 - [x] Implement basic System class for processing components
 
 ### 1.2 Map System
-- [ ] Create tilemap loader for CSV files
-- [ ] Implement basic collision detection
-- [ ] Create door system with states (closed, open, kicked)
-- [ ] Add cover objects and spawn points
+- [x] Create tilemap loader for CSV files
+- [x] Implement basic collision detection
+- [x] Create door system with states (closed, open, kicked)
+- [x] Add cover objects and spawn points
 
 ### 1.3 Basic Movement & Controls
 - [ ] Implement operator movement with WASD

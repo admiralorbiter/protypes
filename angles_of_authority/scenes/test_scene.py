@@ -8,6 +8,10 @@ from core.scene import Scene
 from ecs.entity_manager import EntityManager
 from ecs.entity_factory import EntityFactory
 from ecs.system import MovementSystem, RenderSystem, CollisionSystem, AISystem
+from maps.tilemap import Tilemap
+from maps.map_renderer import MapRenderer
+from maps.map_builder import MapBuilder
+from core.camera import Camera
 
 class TestScene(Scene):
     """Simple test scene to verify basic functionality"""
@@ -29,8 +33,17 @@ class TestScene(Scene):
         self.entity_manager.add_system(CollisionSystem())
         self.entity_manager.add_system(AISystem())
         
+        # Map system
+        self.map_builder = MapBuilder()
+        self.tilemap = None
+        self.map_renderer = None
+        self.camera = None
+        
         # Create test entities
         self._create_test_entities()
+        
+        # Load map
+        self._load_map()
         
     def on_enter(self):
         """Initialize font when scene becomes active"""
@@ -43,11 +56,22 @@ class TestScene(Scene):
         
         # Update ECS systems
         self.entity_manager.update_systems(dt)
+        
+        # Update camera
+        self.camera.update(dt)
     
     def render(self, screen: pygame.Surface):
         """Render test scene"""
         # Clear screen with dark blue
         screen.fill((20, 40, 80))
+        
+        # Render map
+        camera_offset = (self.camera.x, self.camera.y)
+        self.map_renderer.render(screen, camera_offset)
+        
+        # Render minimap
+        minimap_rect = pygame.Rect(10, 10, 150, 100)
+        self.map_renderer.render_minimap(screen, minimap_rect)
         
         if self.font:
             # Render test text
@@ -59,7 +83,9 @@ class TestScene(Scene):
             instructions = [
                 "Controls:",
                 "WASD - Move",
-                "1/2 - Select Operator", 
+                "1 - ECS Debug Info",
+                "2 - Simple Apartment",
+                "3 - Complex Apartment", 
                 "V - Shout",
                 "F - Flashbang",
                 "K - Kick Door",
@@ -73,7 +99,9 @@ class TestScene(Scene):
             # Render ECS debug info
             ecs_info = [
                 f"ECS: {self.entity_manager.get_entity_count()} entities, {self.entity_manager.get_system_count()} systems",
-                "Entities created: Operator, Suspect, Civilian, Press, Cover, Door, Evidence, Wall"
+                "Entities created: Operator, Suspect, Civilian, Press, Cover, Door, Evidence, Wall",
+                f"Map: {self.tilemap.width}x{self.tilemap.height} tiles",
+                f"Camera: ({self.camera.x:.0f}, {self.camera.y:.0f})"
             ]
             
             # Add ECS info to instructions
@@ -98,6 +126,45 @@ class TestScene(Scene):
             elif event.key == pygame.K_1:
                 print("ECS Debug Info:")
                 print(self.entity_manager.debug_info())
+            elif event.key == pygame.K_2:
+                print("Generating simple apartment...")
+                self._load_simple_apartment()
+            elif event.key == pygame.K_3:
+                print("Generating complex apartment...")
+                self._load_complex_apartment()
+    
+    def _load_map(self):
+        """Create and load the apartment map using MapBuilder"""
+        print("Creating apartment map...")
+        
+        # Create a complex apartment
+        self.tilemap = self.map_builder.create_complex_apartment(25, 20)
+        
+        # Set up renderer and camera
+        self.map_renderer = MapRenderer(self.tilemap)
+        self.camera = Camera(1280, 720, 25 * 32, 20 * 32)
+        
+        print("Map created successfully!")
+        print(self.tilemap.debug_info())
+        
+        # Save the generated map for reference
+        self.map_builder.save_map_to_csv(self.tilemap, "generated_apartment.csv")
+    
+    def _load_simple_apartment(self):
+        """Load a simple apartment layout"""
+        self.tilemap = self.map_builder.create_simple_apartment(20, 15)
+        self.map_renderer = MapRenderer(self.tilemap)
+        self.camera = Camera(1280, 720, 20 * 32, 15 * 32)
+        print("Simple apartment loaded!")
+        print(self.tilemap.debug_info())
+    
+    def _load_complex_apartment(self):
+        """Load a complex apartment layout"""
+        self.tilemap = self.map_builder.create_complex_apartment(25, 20)
+        self.map_renderer = MapRenderer(self.tilemap)
+        self.camera = Camera(1280, 720, 25 * 32, 20 * 32)
+        print("Complex apartment loaded!")
+        print(self.tilemap.debug_info())
     
     def _create_test_entities(self):
         """Create test entities to verify ECS system"""
