@@ -124,31 +124,66 @@ class Team(Component):
 class FOV(Component):
     """Field of view and vision capabilities"""
     
-    def __init__(self, fov_degrees: float = 70.0, range_pixels: float = 200.0):
+    def __init__(self, fov_degrees: float = 70.0, range_pixels: float = 120.0):
         super().__init__()
         self.fov_degrees = fov_degrees
         self.range_pixels = range_pixels
     
     def can_see_point(self, transform: Transform, target_x: float, target_y: float) -> bool:
         """Check if this entity can see a specific point"""
+        import math
+        
         # Calculate distance
         dx = target_x - transform.x
         dy = target_y - transform.y
-        distance = (dx * dx + dy * dy) ** 0.5
+        distance = math.sqrt(dx * dx + dy * dy)
         
         if distance > self.range_pixels:
             return False
         
-        # Calculate angle
-        target_angle = (180.0 / 3.14159) * (3.14159 + (dy, -dx).__getitem__(dx < 0))
-        target_angle = target_angle % 360.0
+        # Calculate angle to target (in degrees)
+        # atan2 returns angle in radians, convert to degrees
+        target_angle = math.degrees(math.atan2(dy, dx))
         
-        # Check if within FOV cone
+        # Normalize to 0-360 range
+        target_angle = (target_angle + 360) % 360
+        
+        # Calculate angle difference
         angle_diff = abs(target_angle - transform.rotation)
+        
+        # Handle wrapping around 360 degrees
         if angle_diff > 180.0:
             angle_diff = 360.0 - angle_diff
         
         return angle_diff <= self.fov_degrees / 2.0
+    
+    def get_fov_cone_points(self, transform: Transform, num_points: int = 12) -> list:
+        """Get points defining the FOV cone for visualization"""
+        import math
+        
+        points = []
+        half_fov = self.fov_degrees / 2.0
+        
+        # Add the entity's position as the first point (cone origin)
+        points.append((transform.x, transform.y))
+        
+        # Start angle (left edge of FOV cone)
+        start_angle = transform.rotation - half_fov
+        
+        for i in range(num_points + 1):
+            # Calculate angle for this point
+            angle = start_angle + (self.fov_degrees / num_points) * i
+            
+            # Convert to radians
+            angle_rad = math.radians(angle)
+            
+            # Calculate point on cone edge
+            x = transform.x + math.cos(angle_rad) * self.range_pixels
+            y = transform.y + math.sin(angle_rad) * self.range_pixels
+            
+            points.append((x, y))
+        
+        return points
 
 class AIState(Component):
     """AI behavior state for non-player entities"""

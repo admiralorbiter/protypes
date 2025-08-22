@@ -7,7 +7,7 @@ import pygame
 from abc import ABC, abstractmethod
 from typing import List, Type, TypeVar, Dict, Set
 from .entity import Entity
-from .component import Component, Transform, Hitbox, AIState, Movement, Team
+from .component import Component, Transform, Hitbox, AIState, Movement, Team, FOV
 
 T = TypeVar('T', bound=Component)
 
@@ -215,18 +215,21 @@ class MovementSystem(ComponentSystem):
 class RenderSystem(ComponentSystem):
     """System for rendering entities"""
     
-    def __init__(self, screen=None, camera=None, player_controller=None):
+    def __init__(self, screen=None, camera=None, player_controller=None, vision_system=None):
         super().__init__([Transform])
         self.screen = screen
         self.camera = camera
         self.player_controller = player_controller
+        self.vision_system = vision_system
     
-    def set_screen_and_camera(self, screen, camera, player_controller=None):
+    def set_screen_and_camera(self, screen, camera, player_controller=None, vision_system=None):
         """Set the screen and camera for rendering"""
         self.screen = screen
         self.camera = camera
         if player_controller:
             self.player_controller = player_controller
+        if vision_system:
+            self.vision_system = vision_system
     
     def _process_entity(self, entity: Entity, dt: float):
         """Process rendering for a single entity"""
@@ -263,6 +266,10 @@ class RenderSystem(ComponentSystem):
             text = font.render(entity.name, True, (255, 255, 255))
             text_rect = text.get_rect(center=(screen_x, screen_y - 30))
             self.screen.blit(text, text_rect)
+        
+        # Render FOV cone if entity has FOV component
+        if self.vision_system and entity.has_component(FOV):
+            self._render_fov_cone(entity, screen_x, screen_y)
     
     def _get_entity_color(self, entity):
         """Get color based on entity type"""
@@ -293,6 +300,48 @@ class RenderSystem(ComponentSystem):
         if self.player_controller:
             return entity == self.player_controller.get_selected_operator()
         return False
+    
+    def _render_fov_cone(self, entity: Entity, screen_x: float, screen_y: float):
+        """Render the FOV cone for an entity"""
+        if not self.vision_system:
+            return
+        
+        # Get FOV debug info
+        fov_info = self.vision_system.get_vision_debug_info(entity)
+        if not fov_info or 'fov_cone_points' not in fov_info:
+            return
+        
+        # Convert world coordinates to screen coordinates
+        cone_points = []
+        for world_x, world_y in fov_info['fov_cone_points']:
+            if self.camera and hasattr(self.camera, 'world_to_screen'):
+                screen_cone_x, screen_cone_y = self.camera.world_to_screen(world_x, world_y)
+            else:
+                # Fallback if no camera or no world_to_screen method
+                if self.camera:
+                    screen_cone_x = world_x - self.camera.x
+                    screen_cone_y = world_y - self.camera.y
+                else:
+                    screen_cone_x = world_x
+                    screen_cone_y = world_y
+            
+            cone_points.append((int(screen_cone_x), int(screen_cone_y)))
+        
+        # Draw FOV cone (semi-transparent)
+        if len(cone_points) >= 3:
+            # Create a polygon from the cone points
+            cone_surface = pygame.Surface((self.screen.get_width(), self.screen.get_height()), pygame.SRCALPHA)
+            
+            # Draw the cone with semi-transparent color
+            cone_color = (255, 255, 0, 30)  # Yellow with 30/255 alpha
+            pygame.draw.polygon(cone_surface, cone_color, cone_points)
+            
+            # Draw cone outline
+            outline_color = (255, 255, 0, 100)  # Yellow with 100/255 alpha
+            pygame.draw.lines(cone_surface, outline_color, False, cone_points, 2)
+            
+            # Blit the cone surface onto the screen
+            self.screen.blit(cone_surface, (0, 0))
 
 class CollisionSystem(ComponentSystem):
     """System for handling collisions between entities"""
@@ -317,3 +366,108 @@ class AISystem(ComponentSystem):
         if ai_state:
             ai_state.update_timer(dt)
             # AI logic will be implemented later
+
+class VisionSystem(ComponentSystem):
+    """System for processing field of view and vision calculations"""
+    
+    def __init__(self, tilemap=None):
+        super().__init__([Transform, FOV])
+        self.tilemap = tilemap
+        self.vision_cache = {}  # Cache vision results for performance
+        self.cache_timer = 0.0
+        self.cache_duration = 0.1  # Cache for 100ms
+    
+    def set_tilemap(self, tilemap):
+        """Set the tilemap for line-of-sight calculations"""
+        self.tilemap = tilemap
+    
+    def _process_entity(self, entity: Entity, dt: float):
+        """Process vision for a single entity"""
+        transform = entity.get_component(Transform)
+        fov = entity.get_component(FOV)
+        
+        if not transform or not fov:
+            return
+        
+        # Update cache timer
+        self.cache_timer += dt
+        if self.cache_timer > self.cache_duration:
+            self.vision_cache.clear()
+            self.cache_timer = 0.0
+    
+    def can_see_entity(self, viewer: Entity, target: Entity) -> bool:
+        """Check if viewer entity can see target entity"""
+        viewer_transform = viewer.get_component(Transform)
+        viewer_fov = viewer.get_component(FOV)
+        target_transform = target.get_component(Transform)
+        
+        if not all([viewer_transform, viewer_fov, target_transform]):
+            return False
+        
+        # Check if target is within FOV cone
+        if not viewer_fov.can_see_point(viewer_transform, target_transform.x, target_transform.y):
+            return False
+        
+        # Check line of sight (walls blocking vision)
+        if self.tilemap:
+            if not self._has_line_of_sight(viewer_transform, target_transform):
+                return False
+        
+        return True
+    
+    def get_visible_entities(self, viewer: Entity, all_entities: list) -> list:
+        """Get all entities that the viewer can see"""
+        visible = []
+        
+        for entity in all_entities:
+            if entity.entity_id == viewer.entity_id:
+                continue  # Skip self
+            
+            if self.can_see_entity(viewer, entity):
+                visible.append(entity)
+        
+        return visible
+    
+    def _has_line_of_sight(self, start_transform: Transform, end_transform: Transform) -> bool:
+        """Check if there's a clear line of sight between two points"""
+        if not self.tilemap:
+            return True  # No tilemap means no walls to block vision
+        
+        # Use simple raycasting - check points along the line
+        start_x, start_y = start_transform.x, start_transform.y
+        end_x, end_y = end_transform.x, end_transform.y
+        
+        # Calculate distance and number of steps
+        distance = ((end_x - start_x) ** 2 + (end_y - start_y) ** 2) ** 0.5
+        steps = max(1, int(distance / 16))  # Check every 16 pixels
+        
+        # Check each step along the line
+        for i in range(1, steps + 1):
+            t = i / steps
+            check_x = start_x + (end_x - start_x) * t
+            check_y = start_y + (end_y - start_y) * t
+            
+            # Convert to tile coordinates
+            tile_x, tile_y = self.tilemap.world_to_tile(check_x, check_y)
+            
+            # Check if this tile blocks vision
+            if self.tilemap.blocks_vision(tile_x, tile_y):
+                return False
+        
+        return True
+    
+    def get_vision_debug_info(self, entity: Entity) -> dict:
+        """Get debug information about entity's vision"""
+        transform = entity.get_component(Transform)
+        fov = entity.get_component(FOV)
+        
+        if not transform or not fov:
+            return {}
+        
+        return {
+            'position': (transform.x, transform.y),
+            'rotation': transform.rotation,
+            'fov_degrees': fov.fov_degrees,
+            'range_pixels': fov.range_pixels,
+            'fov_cone_points': fov.get_fov_cone_points(transform)
+        }

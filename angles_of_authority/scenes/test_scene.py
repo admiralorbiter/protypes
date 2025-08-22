@@ -6,10 +6,10 @@ Simple scene to verify basic infrastructure and ECS system
 import pygame
 from core.scene import Scene
 from ecs.entity import Entity
-from ecs.component import Transform
+from ecs.component import Transform, FOV, Team, Movement, Hitbox
 from ecs.entity_manager import EntityManager
 from ecs.entity_factory import EntityFactory
-from ecs.system import MovementSystem, RenderSystem, CollisionSystem, AISystem
+from ecs.system import MovementSystem, RenderSystem, CollisionSystem, AISystem, VisionSystem
 from ecs.player_controller import PlayerController
 from maps.tilemap import Tilemap
 from maps.map_renderer import MapRenderer
@@ -33,8 +33,15 @@ class TestScene(Scene):
         # Add systems
         self.movement_system = MovementSystem()
         self.entity_manager.add_system(self.movement_system)
-        self.render_system = RenderSystem()
+        
+        # Create vision system and add it
+        self.vision_system = VisionSystem()
+        self.entity_manager.add_system(self.vision_system)
+        
+        # Create render system with vision system reference
+        self.render_system = RenderSystem(vision_system=self.vision_system)
         self.entity_manager.add_system(self.render_system)
+        
         self.entity_manager.add_system(CollisionSystem())
         self.entity_manager.add_system(AISystem())
         
@@ -109,59 +116,16 @@ class TestScene(Scene):
                 if -50 <= screen_x <= screen_width + 50 and -50 <= screen_y <= screen_height + 50:
                     self._render_entity(screen, entity, screen_x, screen_y)
         
+        # 4. Render FOV cones after all entities
+        self._render_fov_cones(screen, camera_offset_x, camera_offset_y)
+        
         # Render minimap
         minimap_rect = pygame.Rect(10, 10, 150, 100)
         self.map_renderer.render_minimap(screen, minimap_rect)
         
         if self.font:
-            # Render test text
-            text = self.font.render(f"Test Scene - Counter: {self.counter:.1f}", True, (255, 255, 255))
-            text_rect = text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2))
-            screen.blit(text, text_rect)
-            
-            # Render instructions
-            instructions = [
-                "Controls:",
-                "WASD - Move Operator",
-                "1/2 - Select Operator",
-                "2 - Simple Apartment",
-                "3 - Complex Apartment", 
-                "4 - Player Controller Info",
-                "V - Shout",
-                "F - Flashbang",
-                "K - Kick Door",
-                "C - Cuff",
-                "X - Secure Evidence",
-                "R - Toggle ROE",
-                "Space - Pause",
-                "Escape - Quit"
-            ]
-            
-            # Render ECS debug info
-            ecs_info = [
-                f"ECS: {self.entity_manager.get_entity_count()} entities, {self.entity_manager.get_system_count()} systems",
-                "Entities created: Operator, Suspect, Civilian, Press, Cover, Door, Evidence, Wall",
-                f"Map: {self.tilemap.width if self.tilemap else 'None'}x{self.tilemap.height if self.tilemap else 'None'} tiles",
-                f"Camera: ({self.camera.x:.0f}, {self.camera.y:.0f})" if self.camera else "Camera: None",
-                f"Player Controller: {self.player_controller.get_operator_count()} operators"
-            ]
-            
-            # Add selected operator position info
-            selected_op = self.player_controller.get_selected_operator()
-            if selected_op:
-                transform = selected_op.get_component('Transform')
-                if transform:
-                    ecs_info.append(f"Selected Operator: {selected_op.name} at ({transform.x:.0f}, {transform.y:.0f})")
-            
-            # Add ECS info to instructions
-            instructions.extend([""] + ecs_info)
-            
-            y_offset = 100
-            for instruction in instructions:
-                inst_text = self.font.render(instruction, True, (200, 200, 200))
-                inst_rect = inst_text.get_rect(center=(screen.get_width() // 2, screen.get_height() // 2 + y_offset))
-                screen.blit(inst_text, inst_rect)
-                y_offset += 30
+            # Render UI panel on the right side
+            self._render_ui_panel(screen)
     
     def handle_event(self, event):
         """Handle events in test scene"""
@@ -173,7 +137,8 @@ class TestScene(Scene):
             if event.key == pygame.K_r:
                 print("ROE toggle pressed!")
             elif event.key == pygame.K_v:
-                print("Shout action!")
+                print("Testing vision system...")
+                self._test_vision_system()
             elif event.key == pygame.K_f:
                 print("Flashbang action!")
             elif event.key == pygame.K_2:
@@ -185,6 +150,10 @@ class TestScene(Scene):
             elif event.key == pygame.K_4:
                 print("Player Controller Info:")
                 print(self.player_controller.get_operator_info())
+            elif event.key == pygame.K_q:
+                self._rotate_selected_operator(-45)  # Rotate left
+            elif event.key == pygame.K_e:
+                self._rotate_selected_operator(45)   # Rotate right
         
         elif event.type == pygame.KEYUP:
             # Handle key release for movement
@@ -208,6 +177,9 @@ class TestScene(Scene):
         # Set up movement system with tilemap and entity_manager for collision detection
         self.movement_system.set_tilemap(self.tilemap)
         self.movement_system.set_entity_manager(self.entity_manager)
+        
+        # Set up vision system with tilemap for line-of-sight calculations
+        self.vision_system.set_tilemap(self.tilemap)
         
         # Set up camera to follow selected operator
         self._setup_camera_following()
@@ -233,6 +205,9 @@ class TestScene(Scene):
         self.movement_system.set_tilemap(self.tilemap)
         self.movement_system.set_entity_manager(self.entity_manager)
         
+        # Set up vision system with tilemap for line-of-sight calculations
+        self.vision_system.set_tilemap(self.tilemap)
+        
         # Reposition all entities on the new map
         self._reposition_entities_on_map()
         
@@ -249,6 +224,9 @@ class TestScene(Scene):
         self.camera.center_on(400, 320)  # Center of 25x20 map
         self.movement_system.set_tilemap(self.tilemap)
         self.movement_system.set_entity_manager(self.entity_manager)
+        
+        # Set up vision system with tilemap for line-of-sight calculations
+        self.vision_system.set_tilemap(self.tilemap)
         
         # Reposition all entities on the new map
         self._reposition_entities_on_map()
@@ -341,7 +319,106 @@ class TestScene(Scene):
             self.entity_manager.re_register_entity_with_systems(entity)
         
         print(f"Created {self.entity_manager.get_entity_count()} test entities")
+        
+        # Debug: Check what components each entity has
+        fov_count = len([e for e in self.entity_manager.get_all_entities() if e.has_component(FOV)])
+        print(f"Created {self.entity_manager.get_entity_count()} test entities ({fov_count} with FOV)")
         print("ECS System initialized successfully!")
+    
+    def _render_ui_panel(self, screen: pygame.Surface):
+        """Render UI panel on the right side of the screen"""
+        screen_width, screen_height = screen.get_size()
+        
+        # Calculate panel dimensions and position
+        panel_width = 300
+        panel_x = screen_width - panel_width - 20
+        panel_y = 20
+        panel_height = screen_height - 40
+        
+        # Draw semi-transparent background panel
+        panel_surface = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+        panel_surface.fill((0, 0, 0, 180))  # Black with 180/255 alpha
+        pygame.draw.rect(panel_surface, (100, 100, 100), (0, 0, panel_width, panel_height), 2)  # Border
+        screen.blit(panel_surface, (panel_x, panel_y))
+        
+        # Render content
+        content_x = panel_x + 15
+        content_y = panel_y + 15
+        line_height = 25
+        
+        # Title
+        title_font = pygame.font.Font(None, 28)
+        title_text = title_font.render("GAME CONTROLS", True, (255, 255, 255))
+        screen.blit(title_text, (content_x, content_y))
+        content_y += line_height + 10
+        
+        # Controls section
+        controls_font = pygame.font.Font(None, 20)
+        controls = [
+            "WASD - Move Operator",
+            "1/2 - Select Operator", 
+            "Q/E - Rotate Operator",
+            "V - Test Vision System",
+            "2 - Simple Apartment",
+            "3 - Complex Apartment",
+            "4 - Player Info",
+            "F - Flashbang",
+            "K - Kick Door",
+            "C - Cuff",
+            "X - Secure Evidence",
+            "R - Toggle ROE"
+        ]
+        
+        for control in controls:
+            control_text = controls_font.render(control, True, (200, 200, 200))
+            screen.blit(control_text, (content_x, content_y))
+            content_y += line_height
+        
+        content_y += 10
+        
+        # Game info section
+        info_font = pygame.font.Font(None, 18)
+        info_title = info_font.render("GAME STATUS", True, (255, 255, 255))
+        screen.blit(info_title, (content_x, content_y))
+        content_y += line_height + 5
+        
+        # ECS info
+        ecs_info = [
+            f"Counter: {self.counter:.1f}",
+            f"Entities: {self.entity_manager.get_entity_count()}",
+            f"Systems: {self.entity_manager.get_system_count()}",
+            f"Map: {self.tilemap.width if self.tilemap else 'None'}x{self.tilemap.height if self.tilemap else 'None'}",
+            f"Operators: {self.player_controller.get_operator_count()}"
+        ]
+        
+        for info in ecs_info:
+            info_text = info_font.render(info, True, (180, 180, 180))
+            screen.blit(info_text, (content_x, content_y))
+            content_y += line_height
+        
+        # Vision system info
+        if self.vision_system:
+            content_y += 5
+            fov_entities = [e for e in self.entity_manager.get_all_entities() if e.has_component(FOV)]
+            vision_text = info_font.render(f"FOV Entities: {len(fov_entities)}", True, (180, 180, 180))
+            screen.blit(vision_text, (content_x, content_y))
+            content_y += line_height
+        
+        # Selected operator info
+        selected_op = self.player_controller.get_selected_operator()
+        if selected_op:
+            content_y += 5
+            transform = selected_op.get_component(Transform)
+            if transform:
+                op_info = [
+                    f"Selected: {selected_op.name}",
+                    f"Position: ({transform.x:.0f}, {transform.y:.0f})",
+                    f"Rotation: {transform.rotation:.0f}°"
+                ]
+                for info in op_info:
+                    info_text = info_font.render(info, True, (150, 200, 255))
+                    screen.blit(info_text, (content_x, content_y))
+                    content_y += line_height
     
     def _render_entity(self, screen: pygame.Surface, entity: Entity, screen_x: float, screen_y: float):
         """Render a single entity at screen coordinates"""
@@ -474,6 +551,94 @@ class TestScene(Scene):
                     print(f"Repositioned {getattr(entity, 'name', f'Entity {entity.entity_id}')} to ({new_x:.1f}, {new_y:.1f})")
         
         print(f"Repositioned {len(all_entities)} entities on the new map")
+    
+    def _test_vision_system(self):
+        """Test the vision system by checking what entities can see"""
+        if not self.vision_system:
+            print("Vision system not available!")
+            return
+        
+        all_entities = self.entity_manager.get_all_entities()
+        fov_entities = [e for e in all_entities if e.has_component(FOV)]
+        
+        print(f"Vision Test: {len(fov_entities)} entities with FOV")
+        
+        for viewer in fov_entities:
+            viewer_name = getattr(viewer, 'name', f'Entity {viewer.entity_id}')
+            viewer_transform = viewer.get_component(Transform)
+            
+            if not viewer_transform:
+                continue
+            
+            # Get visible entities
+            visible = self.vision_system.get_visible_entities(viewer, all_entities)
+            
+            if visible:
+                print(f"  {viewer_name}: Can see {len(visible)} entities")
+            else:
+                print(f"  {viewer_name}: Cannot see any entities")
+    
+    def _rotate_selected_operator(self, delta_degrees: float):
+        """Rotate the selected operator to test FOV system"""
+        selected_op = self.player_controller.get_selected_operator()
+        if not selected_op:
+            print("No operator selected!")
+            return
+        
+        transform = selected_op.get_component(Transform)
+        if not transform:
+            print("Selected operator has no transform component!")
+            return
+        
+        old_rotation = transform.rotation
+        transform.rotate(delta_degrees)
+        new_rotation = transform.rotation
+        
+        print(f"Rotated {getattr(selected_op, 'name', 'Operator')}: {old_rotation:.0f}° → {new_rotation:.0f}°")
+        
+        # Test vision immediately after rotation
+        self._test_vision_system()
+    
+    def _render_fov_cones(self, screen: pygame.Surface, camera_offset_x: float, camera_offset_y: float):
+        """Render FOV cones for all entities with FOV components"""
+        if not self.vision_system:
+            return
+        
+        fov_entities = [e for e in self.entity_manager.get_all_entities() if e.has_component(FOV)]
+        
+        for entity in fov_entities:
+            transform = entity.get_component(Transform)
+            if not transform:
+                continue
+            
+            # Get FOV cone points
+            fov = entity.get_component(FOV)
+            cone_points = fov.get_fov_cone_points(transform)
+            
+            if len(cone_points) < 3:
+                continue
+            
+            # Convert world coordinates to screen coordinates
+            screen_cone_points = []
+            for world_x, world_y in cone_points:
+                screen_x = world_x - camera_offset_x
+                screen_y = world_y - camera_offset_y
+                screen_cone_points.append((int(screen_x), int(screen_y)))
+            
+            # Draw FOV cone (semi-transparent)
+            # Create a polygon from the cone points
+            cone_surface = pygame.Surface((screen.get_width(), screen.get_height()), pygame.SRCALPHA)
+            
+            # Draw the cone with semi-transparent color
+            cone_color = (255, 255, 0, 30)  # Yellow with 30/255 alpha
+            pygame.draw.polygon(cone_surface, cone_color, screen_cone_points)
+            
+            # Draw cone outline
+            outline_color = (255, 255, 0, 100)  # Yellow with 100/255 alpha
+            pygame.draw.lines(cone_surface, outline_color, False, screen_cone_points, 2)
+            
+            # Blit the cone surface onto the screen
+            screen.blit(cone_surface, (0, 0))
     
     def _create_simple_test_map(self):
         """Create a simple test map with guaranteed open space"""
