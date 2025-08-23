@@ -1,0 +1,23 @@
+{
+  "name": "Starter City",
+  "size": [
+    48,
+    36
+  ],
+  "wind": [
+    1,
+    0
+  ],
+  "taxes": {
+    "housing": 0,
+    "factory": 10
+  },
+  "rules": [
+    {
+      "node": "Compliance",
+      "tp": 0.6,
+      "fp": 0.25,
+      "delay": 0.5
+    }
+  ]
+}
