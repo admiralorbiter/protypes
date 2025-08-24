@@ -6,6 +6,124 @@ let currentMarkers = [];
 let markerClusterGroup;
 let isDataLoaded = false;
 
+// Color coding system for business types
+const businessTypeColors = {
+    // Food & Beverage
+    'Restaurants': '#FF6B6B', // Red
+    'Food Services': '#FF6B6B',
+    'Bars': '#FF6B6B',
+    'Catering': '#FF6B6B',
+    
+    // Retail & Shopping
+    'Retail': '#4ECDC4', // Teal
+    'Shopping': '#4ECDC4',
+    'Department Stores': '#4ECDC4',
+    'Specialty Stores': '#4ECDC4',
+    
+    // Healthcare & Medical
+    'Medical': '#45B7D1', // Blue
+    'Healthcare': '#45B7D1',
+    'Dental': '#45B7D1',
+    'Pharmacy': '#45B7D1',
+    'Hospital': '#45B7D1',
+    
+    // Professional Services
+    'Professional': '#96CEB4', // Green
+    'Legal': '#96CEB4',
+    'Accounting': '#96CEB4',
+    'Consulting': '#96CEB4',
+    'Real Estate': '#96CEB4',
+    
+    // Manufacturing & Industry
+    'Manufacturing': '#FFEAA7', // Yellow
+    'Industrial': '#FFEAA7',
+    'Production': '#FFEAA7',
+    'Assembly': '#FFEAA7',
+    
+    // Automotive & Transportation
+    'Automotive': '#DDA0DD', // Plum
+    'Transportation': '#DDA0DD',
+    'Auto Repair': '#DDA0DD',
+    'Car Dealership': '#DDA0DD',
+    
+    // Entertainment & Recreation
+    'Entertainment': '#FF8C42', // Orange
+    'Recreation': '#FF8C42',
+    'Sports': '#FF8C42',
+    'Gaming': '#FF8C42',
+    
+    // Construction & Trades
+    'Construction': '#8B4513', // Brown
+    'Contractor': '#8B4513',
+    'Plumbing': '#8B4513',
+    'Electrical': '#8B4513',
+    'HVAC': '#8B4513',
+    
+    // Financial & Banking
+    'Financial': '#32CD32', // Lime Green
+    'Banking': '#32CD32',
+    'Insurance': '#32CD32',
+    'Investment': '#32CD32',
+    
+    // Education & Training
+    'Education': '#9370DB', // Medium Purple
+    'Training': '#9370DB',
+    'School': '#9370DB',
+    'University': '#9370DB',
+    
+    // Technology & IT
+    'Technology': '#00CED1', // Dark Turquoise
+    'Software': '#00CED1',
+    'IT Services': '#00CED1',
+    'Computer': '#00CED1',
+    
+    // Default color for unmatched types
+    'default': '#6C757D' // Gray
+};
+
+// Function to get color for business type
+function getBusinessTypeColor(businessType) {
+    if (!businessType) return businessTypeColors.default;
+    
+    const type = businessType.toLowerCase();
+    
+    // Check for exact matches first
+    for (const [key, color] of Object.entries(businessTypeColors)) {
+        if (key === 'default') continue;
+        if (type.includes(key.toLowerCase())) {
+            return color;
+        }
+    }
+    
+    // Check for partial matches
+    if (type.includes('restaurant') || type.includes('food') || type.includes('cafe')) {
+        return businessTypeColors['Restaurants'];
+    }
+    if (type.includes('retail') || type.includes('store') || type.includes('shop')) {
+        return businessTypeColors['Retail'];
+    }
+    if (type.includes('medical') || type.includes('health') || type.includes('dental')) {
+        return businessTypeColors['Medical'];
+    }
+    if (type.includes('legal') || type.includes('law') || type.includes('attorney')) {
+        return businessTypeColors['Legal'];
+    }
+    if (type.includes('manufacturing') || type.includes('production') || type.includes('factory')) {
+        return businessTypeColors['Manufacturing'];
+    }
+    if (type.includes('auto') || type.includes('car') || type.includes('vehicle')) {
+        return businessTypeColors['Automotive'];
+    }
+    if (type.includes('construction') || type.includes('contractor') || type.includes('build')) {
+        return businessTypeColors['Construction'];
+    }
+    if (type.includes('bank') || type.includes('financial') || type.includes('credit')) {
+        return businessTypeColors['Financial'];
+    }
+    
+    return businessTypeColors.default;
+}
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing application...');
@@ -196,6 +314,9 @@ async function loadBusinessData() {
         // Update statistics
         updateStatistics();
         
+        // Update total business count
+        document.getElementById('totalBusinesses').textContent = allBusinesses.length;
+        
         isDataLoaded = true;
         showLoading(false);
         
@@ -256,26 +377,50 @@ async function loadFilterOptions() {
         // Load business types
         const typesResponse = await fetch('/api/business-types');
         const businessTypes = await typesResponse.json();
+        console.log('Business types response:', businessTypes);
         
         const typeSelect = document.getElementById('businessTypeFilter');
-        businessTypes.forEach(type => {
-            const option = document.createElement('option');
-            option.value = type;
-            option.textContent = type;
-            typeSelect.appendChild(option);
-        });
+        // Clear existing options first
+        typeSelect.innerHTML = '<option value="">All Types</option>';
+        
+        // The API returns objects with business_type and count properties
+        if (Array.isArray(businessTypes)) {
+            businessTypes.forEach(typeObj => {
+                const option = document.createElement('option');
+                // Extract the business_type from the object
+                const typeName = typeObj.business_type || typeObj.name || 'Unknown';
+                const count = typeObj.count || 0;
+                option.value = typeName;
+                option.textContent = `${typeName} (${count})`;
+                typeSelect.appendChild(option);
+            });
+        }
         
         // Load cities
         const citiesResponse = await fetch('/api/cities');
         const cities = await citiesResponse.json();
+        console.log('Cities response:', cities);
         
         const citySelect = document.getElementById('cityFilter');
-        cities.forEach(city => {
-            const option = document.createElement('option');
-            option.value = city;
-            option.textContent = city;
-            citySelect.appendChild(option);
-        });
+        // Clear existing options first
+        citySelect.innerHTML = '<option value="">All Cities</option>';
+        
+        // The API returns objects with city, state, and count properties
+        if (Array.isArray(cities)) {
+            cities.forEach(cityObj => {
+                const option = document.createElement('option');
+                // Extract the city and state from the object
+                const cityName = cityObj.city || cityObj.name || 'Unknown';
+                const stateCode = cityObj.state || '';
+                const count = cityObj.count || 0;
+                const displayText = stateCode ? `${cityName}, ${stateCode} (${count})` : `${cityName} (${count})`;
+                option.value = cityName;
+                option.textContent = displayText;
+                citySelect.appendChild(option);
+            });
+        }
+        
+        console.log('Filter options loaded successfully');
     } catch (error) {
         console.error('Error loading filter options:', error);
     }
@@ -299,8 +444,20 @@ function displayBusinessesInChunks(businesses) {
         
         chunk.forEach(business => {
             if (business.coordinates) {
-                // Create marker with minimal popup content for better performance
+                // Get color for business type
+                const markerColor = getBusinessTypeColor(business.business_type);
+                
+                // Create custom colored marker icon
+                const customIcon = L.divIcon({
+                    className: 'custom-marker',
+                    html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+                    iconSize: [12, 12],
+                    iconAnchor: [6, 6]
+                });
+                
+                // Create marker with custom icon
                 const marker = L.marker([business.coordinates.lat, business.coordinates.lng], {
+                    icon: customIcon,
                     title: business.business_name || business.dba_name || 'Business'
                 });
                 
@@ -497,6 +654,52 @@ function clearFilters() {
     displayBusinesses(allBusinesses);
 }
 
+// Filter by business category
+function filterByCategory() {
+    const showFood = document.getElementById('filterFood').checked;
+    const showRetail = document.getElementById('filterRetail').checked;
+    const showMedical = document.getElementById('filterMedical').checked;
+    const showProfessional = document.getElementById('filterProfessional').checked;
+    const showManufacturing = document.getElementById('filterManufacturing').checked;
+    
+    // Clear existing markers
+    clearMarkers();
+    
+    // Filter businesses based on selected categories
+    const filteredBusinesses = allBusinesses.filter(business => {
+        if (!business.coordinates) return false;
+        
+        const type = business.business_type ? business.business_type.toLowerCase() : '';
+        
+        if (showFood && (type.includes('restaurant') || type.includes('food') || type.includes('cafe') || type.includes('bar'))) {
+            return true;
+        }
+        if (showRetail && (type.includes('retail') || type.includes('store') || type.includes('shop'))) {
+            return true;
+        }
+        if (showMedical && (type.includes('medical') || type.includes('health') || type.includes('dental') || type.includes('pharmacy'))) {
+            return true;
+        }
+        if (showProfessional && (type.includes('legal') || type.includes('law') || type.includes('accounting') || type.includes('consulting') || type.includes('real estate'))) {
+            return true;
+        }
+        if (showManufacturing && (type.includes('manufacturing') || type.includes('production') || type.includes('industrial'))) {
+            return true;
+        }
+        
+        // Show other types if no specific category is selected
+        return !showFood && !showRetail && !showMedical && !showProfessional && !showManufacturing;
+    });
+    
+    console.log(`Filtered to ${filteredBusinesses.length} businesses`);
+    
+    // Display filtered businesses
+    displayBusinessesInChunks(filteredBusinesses);
+    
+    // Update visible count
+    document.getElementById('visibleBusinesses').textContent = filteredBusinesses.length;
+}
+
 // Setup event listeners
 function setupEventListeners() {
     // Search button
@@ -518,6 +721,13 @@ function setupEventListeners() {
     
     // Test map button
     document.getElementById('testMapBtn').addEventListener('click', testMapInteractions);
+    
+    // Category filter checkboxes
+    document.getElementById('filterFood').addEventListener('change', filterByCategory);
+    document.getElementById('filterRetail').addEventListener('change', filterByCategory);
+    document.getElementById('filterMedical').addEventListener('change', filterByCategory);
+    document.getElementById('filterProfessional').addEventListener('change', filterByCategory);
+    document.getElementById('filterManufacturing').addEventListener('change', filterByCategory);
     
     // Add map performance optimizations
     if (map) {
@@ -602,7 +812,35 @@ function updateDebugInfo() {
                 performanceStatus.className = 'stat-value poor';
             }
         }
+        
+        // Update business type statistics
+        updateBusinessTypeStats();
     }
+}
+
+// Update business type statistics
+function updateBusinessTypeStats() {
+    if (!allBusinesses || allBusinesses.length === 0) return;
+    
+    // Count business types
+    const typeCounts = {};
+    allBusinesses.forEach(business => {
+        if (business.business_type) {
+            const type = business.business_type;
+            typeCounts[type] = (typeCounts[type] || 0) + 1;
+        }
+    });
+    
+    // Get top 5 business types
+    const topTypes = Object.entries(typeCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 5);
+    
+    console.log('Top 5 Business Types:');
+    topTypes.forEach(([type, count]) => {
+        const color = getBusinessTypeColor(type);
+        console.log(`%c${type}: ${count}`, `color: ${color}; font-weight: bold;`);
+    });
 }
 
 // Show/hide loading spinner

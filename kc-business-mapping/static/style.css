@@ -387,3 +387,99 @@ body {
 #performanceStatus.poor {
     color: #dc3545;
 }
+
+/* Legend section styles */
+.legend-section {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.legend-section h6 {
+    color: white;
+    margin-bottom: 15px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 5px 0;
+}
+
+.legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.legend-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Custom marker styles */
+.custom-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.custom-marker div {
+    transition: all 0.2s ease;
+}
+
+.custom-marker:hover div {
+    transform: scale(1.2);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* Category filter styles */
+.category-filters {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.form-check {
+    margin-bottom: 8px;
+}
+
+.form-check-input {
+    margin-right: 8px;
+}
+
+.form-check-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.category-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid white;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+/* Custom checkbox styling */
+.form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
