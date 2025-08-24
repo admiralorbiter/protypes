@@ -483,3 +483,100 @@ body {
 .form-check-input:focus {
     box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
 }
+
+/* Marker cluster styles */
+.marker-cluster {
+    background: rgba(0, 123, 255, 0.8);
+    border: 2px solid white;
+    border-radius: 50%;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    line-height: 36px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.marker-cluster div {
+    background: transparent;
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Business name labels - make them highly visible and readable */
+.business-name-label {
+    background: rgba(0, 0, 0, 0.85) !important;
+    color: white !important;
+    border: 2px solid white !important;
+    border-radius: 4px !important;
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    white-space: nowrap !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+    z-index: 1000 !important;
+    max-width: 200px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.business-name-label div {
+    background: transparent !important;
+    color: white !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    font-size: 12px !important;
+    font-weight: bold !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Hover effect for better readability and to show it's clickable */
+.business-name-label:hover {
+    background: rgba(0, 0, 0, 0.95) !important;
+    border-color: #007bff !important;
+    border-width: 3px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8) !important;
+    /* Removed transform scale to prevent bouncing */
+}
+
+/* Active state when clicked */
+.business-name-label:active {
+    /* Removed transform scale to prevent bouncing */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Label popup styling */
+.label-popup {
+    text-align: center;
+    min-width: 200px;
+}
+
+.label-popup h6 {
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: bold;
+}
+
+.label-popup p {
+    margin-bottom: 4px;
+    font-size: 12px;
+    color: #666;
+}
+
+.label-popup .btn {
+    font-size: 11px;
+    padding: 4px 8px;
+}
+
+/* Ensure labels are visible above other map elements */
+.leaflet-marker-pane {
+    z-index: 600 !important;
+}
+
+.leaflet-overlay-pane {
+    z-index: 400 !important;
+}

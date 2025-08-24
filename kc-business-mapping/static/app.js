@@ -5,6 +5,7 @@ let allBusinesses = [];
 let currentMarkers = [];
 let markerClusterGroup;
 let isDataLoaded = false;
+let nameLabels = []; // Array to store name labels
 
 // Color coding system for business types
 const businessTypeColors = {
@@ -81,7 +82,7 @@ const businessTypeColors = {
     'default': '#6C757D' // Gray
 };
 
-// Function to get color for business type
+// Function to get business type color
 function getBusinessTypeColor(businessType) {
     if (!businessType) return businessTypeColors.default;
     
@@ -122,6 +123,250 @@ function getBusinessTypeColor(businessType) {
     }
     
     return businessTypeColors.default;
+}
+
+// Helper function to extract business data from a marker or cluster
+function getBusinessDataFromMarker(marker) {
+    // Try multiple ways to access business data
+    let business = marker.businessData || marker._businessData || marker.options?.businessData;
+    
+    // If this is a cluster, try to get business data from child markers
+    if (!business && marker.getAllChildMarkers && marker.getAllChildMarkers().length > 0) {
+        const childMarkers = marker.getAllChildMarkers();
+        business = childMarkers[0].businessData || childMarkers[0]._businessData;
+    }
+    
+    // If still no business data, try to get it from the marker's popup content
+    if (!business && marker.getPopup && marker.getPopup()) {
+        const popup = marker.getPopup();
+        if (popup && popup.getContent) {
+            const content = popup.getContent();
+            // Try to extract business data from popup content if available
+            console.log('Popup content available:', content);
+        }
+    }
+    
+    return business;
+}
+
+// Function to create a name label for a business
+function createNameLabel(business, latlng) {
+    if (!business) {
+        console.log('No business data provided for label');
+        return null;
+    }
+    
+    // Get the business name (prefer business_name, fallback to dba_name)
+    const businessName = business.business_name || business.dba_name || 'Unknown Business';
+    
+    if (!businessName || businessName === 'Unknown Business') {
+        console.log('No valid business name found:', business);
+        return null;
+    }
+    
+    console.log(`Creating clickable label for: ${businessName}`);
+    
+    // Create a custom icon for the label
+    const labelIcon = L.divIcon({
+        className: 'business-name-label clickable',
+        html: `<div>${businessName}</div>`,
+        iconSize: [200, 30],
+        iconAnchor: [100, 15], // Center the label above the marker
+        popupAnchor: [0, -20]
+    });
+    
+    // Create the label marker with click functionality
+    const label = L.marker(latlng, {
+        icon: labelIcon,
+        interactive: true, // Make labels clickable
+        zIndexOffset: 1000 // Ensure labels are above markers
+    });
+    
+    // Add click event to show business details
+    label.on('click', function() {
+        console.log('Label clicked for business:', businessName);
+        showBusinessDetails(business);
+        
+        // Also show a popup with quick info
+        const popupContent = `
+            <div class="label-popup">
+                <h6>${businessName}</h6>
+                <p><strong>Type:</strong> ${business.business_type}</p>
+                <p><strong>Address:</strong> ${business.address}</p>
+                <p><strong>City:</strong> ${business.city}, ${business.state}</p>
+                <button class="btn btn-sm btn-primary mt-2" onclick="showBusinessDetails(${JSON.stringify(business).replace(/"/g, '&quot;')})">
+                    View Full Details
+                </button>
+            </div>
+        `;
+        
+        label.bindPopup(popupContent).openPopup();
+    });
+    
+    // Add hover effect to show it's clickable
+    label.on('mouseover', function() {
+        this.getElement().classList.add('label-hover');
+    });
+    
+    label.on('mouseout', function() {
+        this.getElement().classList.remove('label-hover');
+    });
+    
+    return label;
+}
+
+// Function to show/hide name labels based on zoom level
+function updateNameLabels() {
+    // Check if name labels are enabled
+    const showLabels = document.getElementById('showNameLabels').checked;
+    if (!showLabels) {
+        console.log('Name labels are disabled');
+        return;
+    }
+    
+    const zoom = map.getZoom();
+    const bounds = map.getBounds();
+    
+    console.log(`Updating name labels at zoom ${zoom}, bounds:`, bounds);
+    
+    // Clear existing labels
+    nameLabels.forEach(label => {
+        if (label && map.hasLayer(label)) {
+            map.removeLayer(label);
+        }
+    });
+    nameLabels = [];
+    
+    // Only show labels at very high zoom levels (16+) to prevent freezing
+    if (zoom >= 16 && markerClusterGroup) {
+        const visibleLayers = markerClusterGroup.getLayers();
+        console.log(`Found ${visibleLayers.length} visible layers at zoom ${zoom}`);
+        
+        // Debug first few markers to see their structure
+        if (visibleLayers.length > 0) {
+            console.log('First marker structure:', visibleLayers[0]);
+            console.log('First marker businessData:', visibleLayers[0].businessData);
+            console.log('First marker _businessData:', visibleLayers[0]._businessData);
+            console.log('First marker options:', visibleLayers[0].options);
+        }
+        
+        // Limit labels to prevent performance issues
+        const maxLabels = 100; // Only show max 100 labels at once
+        let labelCount = 0;
+        
+        visibleLayers.forEach((marker, index) => {
+            // Stop if we've reached the label limit
+            if (labelCount >= maxLabels) return;
+            
+            // Use the helper function to get business data
+            const business = getBusinessDataFromMarker(marker);
+            
+            if (business && business.coordinates) {
+                const latlng = [business.coordinates.lat, business.coordinates.lng];
+                
+                // Check if marker is within current map bounds
+                if (bounds.contains(latlng)) {
+                    const nameLabel = createNameLabel(business, latlng);
+                    if (nameLabel) {
+                        nameLabels.push(nameLabel);
+                        map.addLayer(nameLabel);
+                        labelCount++;
+                        console.log(`Added name label ${labelCount}/${maxLabels} for: ${business.business_name || business.dba_name}`);
+                    } else {
+                        console.log(`Failed to create label for marker ${index}`);
+                    }
+                }
+            } else {
+                if (index < 5) { // Only log first few for debugging
+                    console.log(`Marker ${index} missing data:`, {
+                        hasBusiness: !!business,
+                        hasCoordinates: business ? !!business.coordinates : false,
+                        businessData: marker.businessData,
+                        _businessData: marker._businessData,
+                        optionsBusinessData: marker.options?.businessData,
+                        markerType: marker.constructor.name,
+                        isCluster: !!marker.getAllChildMarkers
+                    });
+                }
+            }
+        });
+        
+        if (labelCount >= maxLabels) {
+            console.log(`Reached label limit (${maxLabels}). Zoom in closer to see more labels.`);
+        }
+    } else if (zoom < 16) {
+        console.log(`Zoom level ${zoom} too low for labels. Zoom to level 16+ to see business names.`);
+    }
+    
+    console.log(`Updated name labels: ${nameLabels.length} labels visible at zoom ${zoom}`);
+}
+
+// Function to force show all labels for debugging
+function forceShowAllLabels() {
+    const zoom = map.getZoom();
+    
+    // Only allow force labels at high zoom levels to prevent freezing
+    if (zoom < 16) {
+        alert(`Please zoom in to level 16+ before forcing labels. Current zoom: ${zoom}. This prevents the browser from freezing when showing 26,900+ labels.`);
+        return;
+    }
+    
+    console.log('Force showing all labels at zoom', zoom);
+    
+    // Clear existing labels
+    nameLabels.forEach(label => {
+        if (label && map.hasLayer(label)) {
+            map.removeLayer(label);
+        }
+    });
+    nameLabels = [];
+    
+    if (markerClusterGroup) {
+        const allLayers = markerClusterGroup.getLayers();
+        console.log(`Creating labels for ${allLayers.length} markers at zoom ${zoom}`);
+        
+        // Limit labels even in force mode to prevent freezing
+        const maxLabels = 200; // Higher limit for force mode, but still safe
+        let labelCount = 0;
+        
+        allLayers.forEach((marker, index) => {
+            // Stop if we've reached the label limit
+            if (labelCount >= maxLabels) return;
+            
+            // Use the helper function to get business data
+            const business = getBusinessDataFromMarker(marker);
+            
+            if (business && business.coordinates) {
+                const nameLabel = createNameLabel(business, [business.coordinates.lat, business.coordinates.lng]);
+                if (nameLabel) {
+                    nameLabels.push(nameLabel);
+                    map.addLayer(nameLabel);
+                    labelCount++;
+                    console.log(`Added forced label ${labelCount}/${maxLabels} for: ${business.business_name || business.dba_name}`);
+                } else {
+                    console.log(`Failed to create label for marker ${index}`);
+                }
+            } else {
+                if (index < 5) { // Only log first few for debugging
+                    console.log(`Marker ${index} missing data:`, {
+                        hasBusiness: !!business,
+                        hasCoordinates: business ? !!business.coordinates : false,
+                        businessData: marker.businessData,
+                        _businessData: marker._businessData,
+                        optionsBusinessData: marker.options?.businessData,
+                        markerType: marker.constructor.name,
+                        isCluster: !!marker.getAllChildMarkers
+                    });
+                }
+            }
+        });
+        
+        console.log(`Force created ${nameLabels.length} labels (limited to ${maxLabels} for performance)`);
+        
+        if (labelCount >= maxLabels) {
+            console.log(`Reached label limit (${maxLabels}). Zoom in closer to see more labels.`);
+        }
+    }
 }
 
 // Initialize the application
@@ -196,10 +441,26 @@ function initializeMap() {
         spiderfyOnMaxZoom: true,
         showCoverageOnHover: false, // Disabled for better performance
         zoomToBoundsOnClick: true,
-        disableClusteringAtZoom: 15, // Reduced from 16
+        disableClusteringAtZoom: 15, // Disable clustering at zoom 15+ to show individual markers
         chunkProgress: updateLoadingProgress, // Use our progress function
         animate: false, // Disable animations for better performance
-        animateAddingMarkers: false
+        animateAddingMarkers: false,
+        // Preserve custom properties when clustering
+        preserveClusterIconBehavior: true,
+        // Custom function to preserve marker properties
+        iconCreateFunction: function(cluster) {
+            // Preserve business data from child markers
+            const markers = cluster.getAllChildMarkers();
+            if (markers.length > 0) {
+                // Store business data on the cluster for later access
+                cluster._businessData = markers[0].businessData || markers[0]._businessData;
+            }
+            return L.divIcon({
+                html: `<div><span>${cluster.getChildCount()}</span></div>`,
+                className: 'marker-cluster',
+                iconSize: L.point(40, 40)
+            });
+        }
     });
     map.addLayer(markerClusterGroup);
     
@@ -215,6 +476,7 @@ function initializeMap() {
     
     map.on('zoomend', function() {
         console.log('Zoom ended at level:', map.getZoom());
+        updateNameLabels(); // Update labels when zoom changes
     });
     
     map.on('movestart', function() {
@@ -223,6 +485,7 @@ function initializeMap() {
     
     map.on('moveend', function() {
         console.log('Map movement ended');
+        updateNameLabels(); // Update labels when map moves
     });
     
     // Add click event to test if map is responsive
@@ -446,6 +709,7 @@ function displayBusinessesInChunks(businesses) {
             if (business.coordinates) {
                 // Get color for business type
                 const markerColor = getBusinessTypeColor(business.business_type);
+                console.log(`Business: ${business.business_name}, Type: ${business.business_type}, Color: ${markerColor}`);
                 
                 // Create custom colored marker icon
                 const customIcon = L.divIcon({
@@ -460,6 +724,12 @@ function displayBusinessesInChunks(businesses) {
                     icon: customIcon,
                     title: business.business_name || business.dba_name || 'Business'
                 });
+                
+                // Store business data directly on the marker object
+                marker.businessData = business;
+                
+                // Also store it in a way that Leaflet can access
+                marker._businessData = business;
                 
                 // Only bind popup on click for better performance
                 marker.on('click', () => {
@@ -510,7 +780,7 @@ function displayBusinesses(businesses) {
 function createPopupContent(business) {
     return `
         <div class="popup-content">
-            <h5>${business.name || business.dba_name}</h5>
+            <h5>${business.business_name || business.dba_name}</h5>
             <p><strong>Type:</strong> ${business.business_type}</p>
             <p><strong>Address:</strong> ${business.address}</p>
             <p><strong>City:</strong> ${business.city}, ${business.state} ${business.zipcode}</p>
@@ -527,13 +797,13 @@ function showBusinessDetails(business) {
     const modalTitle = document.getElementById('businessModalTitle');
     const modalBody = document.getElementById('businessModalBody');
     
-    modalTitle.textContent = business.name || business.dba_name;
+    modalTitle.textContent = business.business_name || business.dba_name;
     
     modalBody.innerHTML = `
         <div class="business-detail-grid">
             <div class="business-detail-item">
                 <div class="business-detail-label">Business Name</div>
-                <div class="business-detail-value">${business.name || 'N/A'}</div>
+                <div class="business-detail-value">${business.business_name || 'N/A'}</div>
             </div>
             <div class="business-detail-item">
                 <div class="business-detail-label">DBA Name</div>
@@ -553,7 +823,7 @@ function showBusinessDetails(business) {
             </div>
             <div class="business-detail-item">
                 <div class="business-detail-label">License Valid Until</div>
-                <div class="business-detail-value">${business.valid_license_for}</div>
+                <div class="business-detail-value">${business.license_valid_until || 'N/A'}</div>
             </div>
             <div class="business-detail-item">
                 <div class="business-detail-label">Coordinates</div>
@@ -578,7 +848,7 @@ function updateBusinessList(businesses) {
         const businessItem = document.createElement('div');
         businessItem.className = 'business-item fade-in';
         businessItem.innerHTML = `
-            <h6>${business.name || business.dba_name}</h6>
+            <h6>${business.business_name || business.dba_name}</h6>
             <p>${business.business_type}</p>
             <p>${business.city}, ${business.state}</p>
         `;
@@ -612,7 +882,18 @@ function updateBusinessList(businesses) {
 
 // Clear all markers from the map
 function clearMarkers() {
-    markerClusterGroup.clearLayers();
+    // Clear name labels
+    nameLabels.forEach(label => {
+        if (label && map.hasLayer(label)) {
+            map.removeLayer(label);
+        }
+    });
+    nameLabels = [];
+    
+    // Clear markers
+    if (markerClusterGroup) {
+        markerClusterGroup.clearLayers();
+    }
     currentMarkers = [];
 }
 
@@ -728,6 +1009,24 @@ function setupEventListeners() {
     document.getElementById('filterMedical').addEventListener('change', filterByCategory);
     document.getElementById('filterProfessional').addEventListener('change', filterByCategory);
     document.getElementById('filterManufacturing').addEventListener('change', filterByCategory);
+    
+    // Name labels toggle
+    document.getElementById('showNameLabels').addEventListener('change', function() {
+        if (this.checked) {
+            updateNameLabels(); // Show labels if enabled
+        } else {
+            // Clear all labels if disabled
+            nameLabels.forEach(label => {
+                if (label && map.hasLayer(label)) {
+                    map.removeLayer(label);
+                }
+            });
+            nameLabels = [];
+        }
+    });
+    
+    // Force show all labels button
+    document.getElementById('forceLabelsBtn').addEventListener('click', forceShowAllLabels);
     
     // Add map performance optimizations
     if (map) {
